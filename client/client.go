@@ -6,7 +6,17 @@ import (
 	"github.com/graphql-go/graphql"
 )
 
-// TraceClient is used to communicate with trace-api.
 type TraceClient interface {
-	Request(context.Context, string) (*graphql.Result, error)
+	TraceRequest(context.Context, string) (*graphql.Result, error)
+}
+
+type AccountClient interface {
+	AccountRequest(context.Context, string) (*graphql.Result, error)
+}
+
+
+// StratumnClient is used to communicate with trace-api or account-api.
+type StratumnClient interface {
+	TraceClient
+	AccountClient
 }

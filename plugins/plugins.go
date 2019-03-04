@@ -34,11 +34,11 @@ type Module interface {
 	// that will be exposed alongside the graphql endpoint.
 	// As the handlers may need to communicate with the Trace API,
 	// we pass the TraceClient.
-	Handlers(client.TraceClient) (http.Handler, error)
+	Handlers(client.StratumnClient) (http.Handler, error)
 }
 
-// Dependent connects other modules.
-type Dependent interface {
+// Requirer connects other modules.
+type Requirer interface {
 	// Requires returns a set of module identifiers needed before this
 	// module can start.
 	Requires() map[string]struct{}
@@ -51,10 +51,8 @@ type Dependent interface {
 
 // Exposer exposes a type to other modules.
 type Exposer interface {
-	// Expose exposes a type to other modules. modules that depend on
+	// Expose exposes a type to other Modules. modules that depend on
 	// this module will receive the returned object in their Resolve method
 	// if they have one.
 	Expose() interface{}
 }
-
-type Az struct{}
