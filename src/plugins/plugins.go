@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/graphql-go/graphql"
-	"github.com/graphql-go/graphql/language/ast"
+	"github.com/vektah/gqlparser/ast"
 
 	"github.com/stratumn/go-connector/src/client"
 )
@@ -23,7 +23,7 @@ type Module interface {
 	// PreProcess is called prior to forwarding the query to trace-api.
 	// It takes the original parsed graphql query.
 	// It returns the query that will be forwarded to trace-api.
-	PreProcess(context.Context, *ast.Document) (*ast.Document, error)
+	PreProcess(context.Context, *ast.Document) (*ast.QueryDocument, error)
 
 	// PostProcess is called after trace-api has returned the result.
 	// It takes the query that was sent to trace-api and the result that was returned.
@@ -37,27 +37,22 @@ type Module interface {
 	Handlers(client.TraceClient) (http.Handler, error)
 }
 
-// Needy depends on other modules.
-type Needy interface {
-	// Needs returns a set of module identifiers needed before this
+// Dependent connects other modules.
+type Dependent interface {
+	// Requires returns a set of module identifiers needed before this
 	// module can start.
-	Needs() map[string]struct{}
-}
+	Requires() map[string]struct{}
 
-// Pluggable connects other modules.
-type Pluggable interface {
-	Needy
-
-	// Plug is given a map of exposed connected objects, giving the handler
+	// Resolve is given a map of exposed connected objects, giving the handler
 	// a chance to use them. It must check that the types are correct, or
 	// return an error.
-	Plug(exposed map[string]interface{}) error
+	Resolve(dependencies map[string]interface{}) error
 }
 
 // Exposer exposes a type to other modules.
 type Exposer interface {
 	// Expose exposes a type to other modules. modules that depend on
-	// this module will receive the returned object in their Plug method
+	// this module will receive the returned object in their Resolve method
 	// if they have one.
 	Expose() interface{}
 }

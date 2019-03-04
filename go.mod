@@ -13,7 +13,7 @@ require (
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/stratumn/go-chainscript v1.0.1
 	github.com/stratumn/go-crypto v0.2.0 // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/vektah/gqlparser v1.1.1
 	golang.org/x/crypto v0.0.0-20190228050851-31a38585487a // indirect
 	golang.org/x/net v0.0.0-20181029044818-c44066c5c816 // indirect
 )

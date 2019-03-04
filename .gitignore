@@ -17,4 +17,8 @@ vendor/
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# VSCode is completely lost with go modules, so it creates folders verywhere..
+bin/
+pkg/
+
 .DS_Store
