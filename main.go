@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/stratumn/go-connector/src/server"
+	"github.com/stratumn/go-connector/server"
 )
 
 func main() {

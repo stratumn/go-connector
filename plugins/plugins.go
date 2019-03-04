@@ -7,7 +7,7 @@ import (
 	"github.com/graphql-go/graphql"
 	"github.com/vektah/gqlparser/ast"
 
-	"github.com/stratumn/go-connector/src/client"
+	"github.com/stratumn/go-connector/client"
 )
 
 // Module is the interface a plugin should implement.
@@ -23,12 +23,12 @@ type Module interface {
 	// PreProcess is called prior to forwarding the query to trace-api.
 	// It takes the original parsed graphql query.
 	// It returns the query that will be forwarded to trace-api.
-	PreProcess(context.Context, *ast.Document) (*ast.QueryDocument, error)
+	PreProcess(context.Context, *ast.QueryDocument) (*ast.QueryDocument, error)
 
 	// PostProcess is called after trace-api has returned the result.
 	// It takes the query that was sent to trace-api and the result that was returned.
 	// It returns the result that will be returned to the user.
-	PostProcess(context.Context, *ast.Document, *graphql.Result) (*graphql.Result, error)
+	PostProcess(context.Context, *ast.QueryDocument, *graphql.Result) (*graphql.Result, error)
 
 	// Handlers allows the module to define custom http handlers
 	// that will be exposed alongside the graphql endpoint.
@@ -56,3 +56,5 @@ type Exposer interface {
 	// if they have one.
 	Expose() interface{}
 }
+
+type Az struct{}

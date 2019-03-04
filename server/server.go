@@ -1,6 +1,8 @@
 package server
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Run runs the server.
 // The connector flow goes as follow:

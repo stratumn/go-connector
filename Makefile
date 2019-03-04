@@ -13,7 +13,7 @@ GO_LIST=$(GO_CMD) list
 EXEC=connector
 BUILD_SOURCES=$(shell find . -name '*.go' | grep -v 'mock' | grep -v 'test' | grep -v '_test.go')
 
-PLUGINS=$(shell $(GO_LIST) ./src/plugins/.../...)
+PLUGINS=$(shell $(GO_LIST) ./plugins/.../...)
 
 # == all ======================================================================
 all: build
