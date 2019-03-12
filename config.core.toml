@@ -1,0 +1,215 @@
+# Stratumn Node configuration file. Keep private!!!
+
+# Settings for the core module.
+[core]
+
+  # Name of the host service used by the boot screen to display metrics and host addresses.
+  boot_screen_host = ""
+
+  # Service to launch when starting the node.
+  boot_service = "boot"
+
+  # The version of the configuration file.
+  configuration_version = 6
+
+  # Whether to show the boot screen when starting the node.
+  enable_boot_screen = false
+
+  [[core.service_groups]]
+
+    # Description of the service group.
+    description = "Starts boot services."
+
+    # Unique identifier of the service group.
+    id = "boot"
+
+    # Name of the service group.
+    name = "Boot Services"
+
+    # Services started by the group.
+    services = ["system","api","util"]
+
+  [[core.service_groups]]
+
+    # Description of the service group.
+    description = "Starts system services."
+
+    # Unique identifier of the service group.
+    id = "system"
+
+    # Name of the service group.
+    name = "System Services"
+
+    # Services started by the group.
+    services = ["signal","pruner","monitoring"]
+
+  [[core.service_groups]]
+
+    # Description of the service group.
+    description = "Starts API services."
+
+    # Unique identifier of the service group.
+    id = "api"
+
+    # Name of the service group.
+    name = "API Services"
+
+    # Services started by the group.
+    services = ["grpcapi","grpcweb"]
+
+  [[core.service_groups]]
+
+    # Description of the service group.
+    description = "Starts utility services."
+
+    # Unique identifier of the service group.
+    id = "util"
+
+    # Name of the service group.
+    name = "Utility Services"
+
+    # Services started by the group.
+    services = ["event"]
+
+# Settings for the decryption module.
+[decryption]
+
+  # The version of the service configuration.
+  configuration_version = 1
+
+  # The encryption private key.
+  encryption_private_key = ""
+
+# Settings for the event module.
+[event]
+
+  # How long to wait before dropping a message when listeners are too slow.
+  write_timeout = "100ms"
+
+# Settings for the grpcapi module.
+[grpcapi]
+
+  # Address to bind to.
+  address = "/ip4/127.0.0.1/tcp/8904"
+
+  # Whether to log requests.
+  enable_request_logger = true
+
+  # The name of the manager service.
+  manager = "manager"
+
+  # Path to a TLS certificate.
+  tls_certificate_file = ""
+
+  # Path to a TLS key.
+  tls_key_file = ""
+
+# Settings for the grpcweb module.
+[grpcweb]
+
+  # Address to bind to.
+  address = "/ip4/127.0.0.1/tcp/8906"
+
+  # The name of the grpcapi service.
+  grpcapi = "grpcapi"
+
+# Settings for the log module.
+[log]
+
+  [[log.writers]]
+
+    # Whether to compress the file.
+    compress = false
+
+    # The file for a file logger.
+    filename = "/Users/mourad/dev/stratumn/backend/go-connector/log.jsonld"
+
+    # The formatter for the writer (json, text, color, journald).
+    formatter = "json"
+
+    # The log level for the writer (info, error, all).
+    level = "all"
+
+    # The maximum age of the file in days before a rotation.
+    maximum_age = 7
+
+    # The maximum number of backups.
+    maximum_backups = 4
+
+    # The maximum size of the file in megabytes before a rotation.
+    maximum_size = 128
+
+    # The type of writer (file, stdout, stderr).
+    type = "file"
+
+    # Whether to use local time instead of UTC for backups.
+    use_local_time = false
+
+# Settings for the monitoring module.
+[monitoring]
+
+  # Interval between updates of periodic stats.
+  interval = "10s"
+
+  # Name of the metrics exporter (prometheus or stackdriver). Leave empty to disable metrics.
+  metrics_exporter = "prometheus"
+
+  # Name of the trace exporter (jaeger or stackdriver). Leave empty to disable tracing.
+  trace_exporter = ""
+
+  # Fraction of traces to record.
+  trace_sampling_ratio = 1.0
+
+  # Jaeger configuration options (if enabled).
+  [monitoring.jaeger]
+
+    # Address of the Jaeger agent to collect traces.
+    endpoint = "/ip4/127.0.0.1/tcp/14268"
+
+  # Prometheus configuration options (if enabled).
+  [monitoring.prometheus]
+
+    # Address of the endpoint to expose Prometheus metrics.
+    endpoint = "/ip4/127.0.0.1/tcp/8905"
+
+  # Stackdriver configuration options (if enabled).
+  [monitoring.stackdriver]
+
+    # Identifier of the Stackdriver project.
+    project_id = "your-stackdriver-project-id"
+
+# Settings for the pruner module.
+[pruner]
+
+  # Interval between prune jobs.
+  interval = "1m"
+
+  # The name of the manager service.
+  manager = "manager"
+
+# Settings for the signal module.
+[signal]
+
+  # Allow forced shutdown by sending second signal.
+  allow_forced_shutdown = true
+
+  # The name of the manager service.
+  manager = "manager"
+
+# Settings for the stratumnClient module.
+[stratumnClient]
+
+  # The URL of Stratumn Account APIs.
+  account_url = "https://account-api.staging.stratumn.rocks"
+
+  # The version of the service configuration.
+  configuration_version = 1
+
+  # The name of the decryption service.
+  decryption = "decryption"
+
+  # The signing private key.
+  signing_private_key = ""
+
+  # The URL of Stratumn Trace APIs.
+  trace_url = "https://trace-api.staging.stratumn.rocks"

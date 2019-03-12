@@ -1,19 +1,27 @@
-module github.com/stratumn/go-connector
+module go-connector
 
 go 1.12
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/gibson042/canonicaljson-go v1.0.3 // indirect
-	github.com/gogo/protobuf v1.2.1 // indirect
-	github.com/golang/protobuf v1.3.0 // indirect
-	github.com/graphql-go/graphql v0.7.7
-	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
+	contrib.go.opencensus.io/exporter/ocagent v0.4.6 // indirect
+	contrib.go.opencensus.io/exporter/stackdriver v0.9.1 // indirect
+	github.com/census-instrumentation/opencensus-proto v0.1.0 // indirect
+	github.com/coreos/etcd v3.3.12+incompatible // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/improbable-eng/grpc-web v0.9.1 // indirect
+	github.com/libp2p/go-libp2p-peer v0.0.1
+	github.com/pkg/errors v0.8.1
+	github.com/sirupsen/logrus v1.3.0 // indirect
+	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
+	github.com/spf13/viper v1.3.1
 	github.com/stratumn/go-chainscript v1.0.1
-	github.com/stratumn/go-crypto v0.2.0 // indirect
-	github.com/vektah/gqlparser v1.1.1
-	golang.org/x/crypto v0.0.0-20190228050851-31a38585487a // indirect
-	golang.org/x/net v0.0.0-20181029044818-c44066c5c816 // indirect
+	github.com/stratumn/go-crypto v0.2.0
+	github.com/stratumn/go-node v0.0.0-00010101000000-000000000000
+	github.com/stratumn/merkle v0.0.0-20181206165707-724150182895 // indirect
+	go.opencensus.io v0.19.1 // indirect
+	google.golang.org/appengine v1.4.0 // indirect
+	google.golang.org/grpc v1.19.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
+
+replace github.com/stratumn/go-node => /Users/mourad/dev/stratumn/backend/go-node

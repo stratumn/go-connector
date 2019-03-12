@@ -1,0 +1,34 @@
+# Stratumn Node configuration file. Keep private!!!
+
+# Settings for the cli module.
+[cli]
+
+  # The address of the gRPC API.
+  api_address = "/ip4/127.0.0.1/tcp/8904"
+
+  # The version of the configuration file.
+  configuration_version = 1
+
+  # The maximum allowed duration to dial the API.
+  dial_timeout = "30s"
+
+  # Whether to display color output.
+  enable_color_output = true
+
+  # Whether to display debug output.
+  enable_debug_output = false
+
+  # Filenames of scripts that should be executed after the CLI has started.
+  init_scripts = []
+
+  # Which prompt backend to use (vt100, readline). VT100 is not available on Windows.
+  prompt_backend = "vt100"
+
+  # The maximum allowed duration for requests to the API.
+  request_timeout = "30s"
+
+  # Path to a TLS certificate.
+  tls_certificate_file = ""
+
+  # Override the server name of the TLS authority (for testing only).
+  tls_server_name_override = ""
