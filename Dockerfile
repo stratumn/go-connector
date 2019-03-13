@@ -1,27 +1,21 @@
-FROM golang:1.12-stretch AS build-env
+FROM golang:1.12-alpine
 
-# All these steps will be cached
-RUN mkdir /home/connector
-WORKDIR /home/connector
-COPY go.mod .
-COPY go.sum .
+RUN addgroup -S -g 9999 connector
+RUN adduser -H -D -u 9999 -G connector connector
 
-# Get dependencies - will also be cached if we won't change mod/sum
-RUN go mod download
+RUN mkdir -p /usr/local/var/connector
+RUN chown connector:connector /usr/local/var/connector/
+RUN chmod 0700 /usr/local/var/connector
 
-# COPY the source code as the last step
-COPY . .
+RUN mkdir -p /usr/local/bin
+COPY dist/linux-amd64/connector /usr/local/bin/
+COPY config.core.toml /usr/local/var/connector
 
-# Build the server
-RUN go build -o connector
+USER connector
 
-FROM scratch
+WORKDIR /usr/local/var/connector
 
-# Copy binaries and plugins
-COPY --from=build-env /home/connector/validation.so /go/bin/validation.so
-COPY --from=build-env /home/connector/api.so /go/bin/api.so
-COPY --from=build-env /home/connector/decryption.so /go/bin/decryption.so
+EXPOSE 8903 8904 8905 8906
+VOLUME [ "/usr/local/var/connector" ]
 
-COPY --from=build-env /home/connector/connector /go/bin/connector
-
-ENTRYPOINT ["/go/bin/connector"]
+ENTRYPOINT [ "/usr/local/bin/connector" ]
