@@ -18,3 +18,9 @@ vendor/
 *.out
 
 .DS_Store
+
+go-connector
+
+# Alice related files
+config.core.20*.toml
+log.jsonld

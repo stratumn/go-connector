@@ -15,11 +15,6 @@ COPY . .
 # Build the server
 RUN go build -o connector
 
-# Build the plugins
-RUN go build -buildmode=plugin ./plugins/validation
-RUN go build -buildmode=plugin ./plugins/api
-RUN go build -buildmode=plugin ./plugins/decryption
-
 FROM scratch
 
 # Copy binaries and plugins
