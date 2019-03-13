@@ -123,6 +123,4 @@ func main() {
 
 	// So the linter doesn't complain.
 	cancel()
-
-	core.New(config, core.OptServices(Services...))
 }

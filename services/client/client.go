@@ -25,10 +25,7 @@ type client struct {
 	// The PEM encoded signing private key of the conenctor.
 	signingPrivateKey []byte
 
-	// The encrypted organization encryption key.
-	// Needs to be decrypted before usage.
-	orgEncryptionKey []byte
-	authToken        string
+	authToken string
 }
 
 func newClient(traceURL string, accountURL string, signingPrivateKey []byte) StratumnClient {

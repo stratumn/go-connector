@@ -1,0 +1,83 @@
+version: v1.0
+name: go-connector
+agent:
+  machine:
+    type: e1-standard-4
+    os_image: ubuntu1804
+execution_time_limit:
+  minutes: 15
+
+blocks:
+  - name: Install and cache tools
+    task:
+      prologue:
+        commands:
+          # Go project boiler plate.
+          - change-go-version 1.12
+          - export "GOPATH=$(go env GOPATH)"
+          - export "GOBIN=${GOPATH}/bin"
+          - export "PATH=${GOBIN}:${PATH}"
+          - mkdir -vp $GOPATH
+      jobs:
+        - name: Install and cache Go tools
+          commands:
+            - cd $GOPATH
+            # Only update binaries once a month.
+            - KEY=gotools-$(date +%Y%m)-v1
+            - cache has_key "$KEY" || mkdir -vp "${GOBIN}"
+            - cache restore "$KEY"
+            - cache has_key "$KEY" || go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
+            # Cache everything in $GOPATH/bin.
+            - cache store "$KEY" bin
+
+  - name: Warm cache
+    task:
+      prologue:
+        commands:
+          # Go project boiler plate.
+          - change-go-version 1.12
+          - export "GOPATH=$(go env GOPATH)"
+          - export "GOBIN=${GOPATH}/bin"
+          - export "PATH=${GOBIN}:${PATH}"
+          - mkdir -vp $GOPATH
+          # Load Go tools from cache.
+          - cd $GOPATH
+          - cache restore gotools-$(date +%Y%m)-v1
+          # Git checkout.
+          - checkout
+      jobs:
+        - name: Warm deps
+          commands:
+            - export "KEY=deps-$(checksum go.sum)-v1"
+            - cache restore "$KEY"
+            - cache has_key "$KEY" || (go mod download && go mod vendor)
+            - cache store $KEY vendor
+
+  - name: Lint and test
+    task:
+      prologue:
+        commands:
+          # Go project boiler plate.
+          - change-go-version 1.12
+          - export "GOPATH=$(go env GOPATH)"
+          - export "GOBIN=${GOPATH}/bin"
+          - export "PATH=${GOBIN}:${PATH}"
+          # Tell go to use the vendor directory instead of pulling dependencies
+          - export "GOFLAGS=-mod=vendor"
+          - mkdir -vp $GOPATH
+          # Load Go tools from cache.
+          - cd $GOPATH
+          - cache restore gotools-$(date +%Y%m)-v1
+          # Git checkout.
+          - checkout
+          # Restore caches.
+          - cache restore deps-$(checksum go.sum)-v1
+          # Other tasks.
+          - make build
+      jobs:
+        - name: Lint
+          commands:
+            - make lint
+        - name: Run unit tests
+          commands:
+            - make test
