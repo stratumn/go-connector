@@ -41,7 +41,9 @@ github.com/c-bata/go-prompt v0.2.3/go.mod h1:VzqtzE2ksDBcdln8G7mk2RX9QyGjH+OVqOC
 github.com/census-instrumentation/opencensus-proto v0.1.0-0.20181214143942-ba49f56771b8/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.1.0 h1:VwZ9smxzX8u14/125wHIX7ARV+YhR+L4JADswwxWK0Y=
 github.com/census-instrumentation/opencensus-proto v0.1.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
+github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
+github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/coreos/etcd v3.3.10+incompatible/go.mod h1:uF7uidLiAD3TWHmW31ZFd/JWoc32PjwdhPthX9715RE=
 github.com/coreos/etcd v3.3.12+incompatible h1:pAWNwdf7QiT1zfaWyqCtNZQWCLByQyA3JrSQyuYAqnQ=
@@ -371,6 +373,8 @@ github.com/stratumn/go-node v0.1.1-0.20190311145614-5132b625b6ba h1:veOl64fv/ZkQ
 github.com/stratumn/go-node v0.1.1-0.20190311145614-5132b625b6ba/go.mod h1:bZZXsP0bI8T6EJBbivYaSzbbgt84db1t8dHOhsfsX0k=
 github.com/stratumn/go-node v0.1.1-0.20190312095117-a95f6ee6c72c h1:Nynn9WLj0rn2mUWFOqcHaZ6N/Kr3vCwVN6sfYyoOJs0=
 github.com/stratumn/go-node v0.1.1-0.20190312095117-a95f6ee6c72c/go.mod h1:bZZXsP0bI8T6EJBbivYaSzbbgt84db1t8dHOhsfsX0k=
+github.com/stratumn/go-node v0.2.0 h1:NvClAwzMxMq6TyZt8B+FglwpJS9TA1NWehKv6EP6WWU=
+github.com/stratumn/go-node v0.2.0/go.mod h1:GyDnueHmy54A843UynbW2XRGRbn7HEr1x2wgVvx9ylw=
 github.com/stratumn/merkle v0.0.0-20181025134551-a15850ce9757/go.mod h1:sR//0PtlOEYgnVAqBmicVXFZfKlOO4wdGmWYsscvKmw=
 github.com/stratumn/merkle v0.0.0-20181206165707-724150182895 h1:QDdsJSj2yc+L/t/SpKL5WTxNy9sQuIJXqFBHX/GNH9A=
 github.com/stratumn/merkle v0.0.0-20181206165707-724150182895/go.mod h1:sR//0PtlOEYgnVAqBmicVXFZfKlOO4wdGmWYsscvKmw=

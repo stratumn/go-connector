@@ -11,8 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate mockgen -package mockclient -destination mockclient/mockclient.go axa-clp-axabot/client Client
-
 // StratumnClient is the client interface to Stratumn services.
 type StratumnClient interface {
 	TraceClient

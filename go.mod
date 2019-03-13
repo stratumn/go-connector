@@ -16,12 +16,11 @@ require (
 	github.com/spf13/viper v1.3.1
 	github.com/stratumn/go-chainscript v1.0.1
 	github.com/stratumn/go-crypto v0.2.0
-	github.com/stratumn/go-node v0.0.0-00010101000000-000000000000
+	github.com/stratumn/go-node v0.2.0
 	github.com/stratumn/merkle v0.0.0-20181206165707-724150182895 // indirect
+	github.com/stretchr/testify v1.3.0
 	go.opencensus.io v0.19.1 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/grpc v1.19.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
-
-replace github.com/stratumn/go-node => /Users/mourad/dev/stratumn/backend/go-node
