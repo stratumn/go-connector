@@ -9,6 +9,7 @@ import (
 
 	"go-connector/services/client"
 	"go-connector/services/decryption"
+	"go-connector/services/memorystore"
 
 	"github.com/pkg/errors"
 
@@ -35,6 +36,7 @@ var (
 		&signal.Service{},
 		&client.Service{},
 		&decryption.Service{},
+		&memorystore.Service{},
 	}
 
 	Config = core.Config{
