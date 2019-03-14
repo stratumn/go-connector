@@ -1,4 +1,4 @@
-FROM golang:1.12-alpine
+FROM stratumn/gobase:latest
 
 RUN addgroup -S -g 9999 connector
 RUN adduser -H -D -u 9999 -G connector connector
