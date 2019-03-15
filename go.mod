@@ -8,12 +8,10 @@ require (
 	github.com/census-instrumentation/opencensus-proto v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.12+incompatible // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/golang/mock v1.2.0
 	github.com/improbable-eng/grpc-web v0.9.1 // indirect
-	github.com/libp2p/go-libp2p-peer v0.0.1
 	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.3.0 // indirect
-	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
-	github.com/spf13/viper v1.3.1
 	github.com/stratumn/go-chainscript v1.0.1
 	github.com/stratumn/go-crypto v0.2.0
 	github.com/stratumn/go-node v0.2.0

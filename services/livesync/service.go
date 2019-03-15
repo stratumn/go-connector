@@ -1,41 +1,52 @@
-package memorystore
+package livesync
 
 import (
 	"context"
+	"time"
+
+	"go-connector/services/client"
 
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"
-	"github.com/stratumn/go-node/core/db"
 )
 
-//go:generate mockgen -package mockmemorystore -destination mockmemorystore/mockmemorystore.go  github.com/stratumn/go-node/core/db DB
+// DefaultPollInterval is the default interval at which the livesync service calls Startumn APIs
+const DefaultPollInterval = 10 * time.Second
 
-// Service is the Memorystore service.
+var (
+	// ErrNotClient is returned when the connected service is not a stratumn client.
+	ErrNotClient = errors.New("connected service is not a stratumn client")
+)
+
+// Service is the Livesync service.
 type Service struct {
 	config *Config
 
-	db db.DB
+	client       client.StratumnClient
+	synchronizer *synchronizer
 }
 
-// Config contains configuration options for the Memorystore service.
+// Config contains configuration options for the Livesync service.
 type Config struct {
 	// ConfigVersion is the version of the configuration file.
 	ConfigVersion int `toml:"configuration_version" comment:"The version of the service configuration."`
+
+	PollInterval time.Duration `toml:"poll_interval" comment:"The frenquency at which the livesync service polls data from Stratumn APIs."`
 }
 
 // ID returns the unique identifier of the service.
 func (s *Service) ID() string {
-	return "memorystore"
+	return "livesync"
 }
 
 // Name returns the human friendly name of the service.
 func (s *Service) Name() string {
-	return "Memory Store"
+	return "Stratumn API Live Sync"
 }
 
 // Desc returns a description of what the service does.
 func (s *Service) Desc() string {
-	return "In-Memory Key/Value store"
+	return "Polls data from the Stratumn APIs at regular intervals"
 }
 
 // Config returns the current service configuration or creates one with
@@ -45,7 +56,9 @@ func (s *Service) Config() interface{} {
 		return *s.config
 	}
 
-	return Config{}
+	return Config{
+		PollInterval: DefaultPollInterval,
+	}
 }
 
 // SetConfig configures the service.
@@ -57,30 +70,50 @@ func (s *Service) SetConfig(config interface{}) error {
 
 // Needs returns the set of services this service depends on.
 func (s *Service) Needs() map[string]struct{} {
-	return nil
+	return map[string]struct{}{
+		"stratumnClient": struct{}{},
+	}
 }
 
 // Plug sets the connected services.
 func (s *Service) Plug(exposed map[string]interface{}) error {
+	var ok bool
+
+	if s.client, ok = exposed["stratumnClient"].(client.StratumnClient); !ok {
+		return errors.Wrap(ErrNotClient, "stratumnClient")
+	}
+
 	return nil
 }
 
-// Expose exposes the database client to other services.
-// It exposes the database instance.
+// Expose exposes the synchronizer client to other services.
+// It exposes the Synchronizer instance.
 func (s *Service) Expose() interface{} {
-	return s.db
+	return s.synchronizer
 }
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	var err error
-	s.db, err = db.NewMemDB(nil)
-	if err != nil {
-		return err
-	}
+	s.synchronizer = &synchronizer{}
+	ticker := time.NewTicker(time.Second * s.config.PollInterval)
 
 	running()
-	<-ctx.Done()
+
+RUN_LOOP:
+	for {
+		select {
+		case <-ticker.C:
+			err := s.synchronizer.pollAndNotify()
+			if err != nil {
+				stopping()
+				return err
+			}
+		case <-ctx.Done():
+			break RUN_LOOP
+		}
+	}
+
+	ticker.Stop()
 	stopping()
 
 	return errors.WithStack(ctx.Err())
@@ -95,5 +128,9 @@ func (s *Service) VersionKey() string {
 
 // Migrations is the services migrations.
 func (s *Service) Migrations() []cfg.MigrateHandler {
-	return []cfg.MigrateHandler{}
+	return []cfg.MigrateHandler{
+		func(tree *cfg.Tree) error {
+			return tree.Set("poll_interval", 1)
+		},
+	}
 }

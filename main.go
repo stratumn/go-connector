@@ -9,7 +9,9 @@ import (
 
 	"go-connector/services/client"
 	"go-connector/services/decryption"
+	"go-connector/services/livesync"
 	"go-connector/services/memorystore"
+	"go-connector/services/parser"
 
 	"github.com/pkg/errors"
 
@@ -37,6 +39,8 @@ var (
 		&client.Service{},
 		&decryption.Service{},
 		&memorystore.Service{},
+		&parser.Service{},
+		&livesync.Service{},
 	}
 
 	Config = core.Config{
