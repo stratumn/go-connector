@@ -104,26 +104,17 @@ func (s *Service) Run(ctx context.Context, running, stopping func()) error {
 
 	errChan := make(chan error)
 	go func() {
-		if err := s.parser.run(ctx); err != nil {
-			errChan <- err
-		}
+		err := s.parser.run(ctx)
+		errChan <- err
 		close(errChan)
 	}()
 
-RUN_LOOP:
-	for {
-		select {
-		case err := <-errChan:
-			if err != nil {
-				stopping()
-				return err
-			}
-		case <-ctx.Done():
-			break RUN_LOOP
-		}
-	}
-
+	err := <-errChan
 	stopping()
+
+	if err != nil {
+		return err
+	}
 	return errors.WithStack(ctx.Err())
 }
 

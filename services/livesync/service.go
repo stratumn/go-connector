@@ -105,6 +105,7 @@ RUN_LOOP:
 		case <-ticker.C:
 			err := s.synchronizer.pollAndNotify()
 			if err != nil {
+				stopping()
 				return err
 			}
 		case <-ctx.Done():
