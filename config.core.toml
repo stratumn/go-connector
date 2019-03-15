@@ -113,6 +113,15 @@
   # The name of the grpcapi service.
   grpcapi = "grpcapi"
 
+# Settings for the livesync module.
+[livesync]
+
+  # The version of the service configuration.
+  configuration_version = 1
+
+  # The frenquency at which the livesync service polls data from Stratumn APIs.
+  poll_interval = 1
+
 # Settings for the log module.
 [log]
 
@@ -122,7 +131,7 @@
     compress = false
 
     # The file for a file logger.
-    filename = "/Users/mourad/dev/stratumn/backend/go-connector/log.jsonld"
+    filename = "log.jsonld"
 
     # The formatter for the writer (json, text, color, journald).
     formatter = "json"
@@ -144,6 +153,12 @@
 
     # Whether to use local time instead of UTC for backups.
     use_local_time = false
+
+# Settings for the memorystore module.
+[memorystore]
+
+  # The version of the service configuration.
+  configuration_version = 0
 
 # Settings for the monitoring module.
 [monitoring]
@@ -177,6 +192,15 @@
 
     # Identifier of the Stackdriver project.
     project_id = "your-stackdriver-project-id"
+
+# Settings for the parser module.
+[parser]
+
+  # The version of the service configuration.
+  configuration_version = 1
+
+  # The name of the store service.
+  store = "memorystore"
 
 # Settings for the pruner module.
 [pruner]
