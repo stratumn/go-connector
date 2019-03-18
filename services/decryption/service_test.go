@@ -25,11 +25,6 @@ var (
 	pk, _     = keys.EncodePublicKey(pub)
 )
 
-type recipient struct {
-	PubKey       string
-	SymmetricKey []byte
-}
-
 func TestDecryptionService_DecryptLink(t *testing.T) {
 	config := decryption.Config{
 		EncryptionPrivateKey: key,
@@ -170,14 +165,14 @@ func createEncryptedLink(t *testing.T, data map[string]interface{}, pks [][]byte
 	return l
 }
 
-func createRecipients(t *testing.T, pks [][]byte, key []byte) []*recipient {
-	res := make([]*recipient, len(pks))
+func createRecipients(t *testing.T, pks [][]byte, key []byte) []*decryption.Recipient {
+	res := make([]*decryption.Recipient, len(pks))
 
 	for i, pk := range pks {
 		encryptedKey, err := encryption.EncryptShort(pk, key)
 		require.NoError(t, err)
 
-		res[i] = &recipient{
+		res[i] = &decryption.Recipient{
 			PubKey:       string(pk),
 			SymmetricKey: encryptedKey,
 		}

@@ -22,10 +22,12 @@ var (
 // Decryptor decrypt links using the connector's key.
 // Each link mist contain data and meta.recipients.
 type Decryptor interface {
-	// Decrypt a single link.
+	// Decrypt a single link. The decryption is done in place.
 	DecryptLink(context.Context, *cs.Link) error
-	// Decrypt a list of links. e.g. trace.links.nodes
+	// DecryptLinks decrypts a list of links. e.g. trace.links.nodes. The decryption is done in place.
 	DecryptLinks(context.Context, []*cs.Link) error
+	// DecryptLinkData decrypts data given a list of recipients and returns the decrypted data.
+	DecryptLinkData(ctx context.Context, data []byte, recipients []*Recipient) ([]byte, error)
 }
 
 type decryptor struct {
@@ -50,13 +52,31 @@ func newDecryptor(sk []byte) (Decryptor, error) {
 	}, nil
 }
 
-type recipient struct {
+// Recipient is a decryption recipient.
+type Recipient struct {
 	PubKey       string
 	SymmetricKey []byte
 }
 
 type metadata struct {
-	Recipients []*recipient
+	Recipients []*Recipient
+}
+
+func (d *decryptor) DecryptLinkData(ctx context.Context, data []byte, recipients []*Recipient) ([]byte, error) {
+	// Get the symmetric key that was RSA-encrypted for us.
+	var symKey []byte
+	for i := range recipients {
+		if recipients[i].PubKey == string(d.encryptionPublicKey) {
+			symKey = recipients[i].SymmetricKey
+			break
+		}
+	}
+
+	if symKey == nil {
+		return nil, ErrNotInRecipients
+	}
+
+	return encryption.Decrypt(d.encryptionPrivateKey, append(symKey, data...))
 }
 
 func (d *decryptor) DecryptLink(ctx context.Context, l *cs.Link) error {
@@ -71,7 +91,7 @@ func (d *decryptor) DecryptLink(ctx context.Context, l *cs.Link) error {
 		return err
 	}
 
-	data, err := d.decryptLinkData(ctx, l.GetData(), md.Recipients)
+	data, err := d.DecryptLinkData(ctx, l.GetData(), md.Recipients)
 	if err != nil {
 		return err
 	}
@@ -87,21 +107,4 @@ func (d *decryptor) DecryptLinks(ctx context.Context, links []*cs.Link) error {
 		}
 	}
 	return nil
-}
-
-func (d *decryptor) decryptLinkData(ctx context.Context, data []byte, recipients []*recipient) ([]byte, error) {
-	// Get the symmetric key that was RSA-encrypted for us.
-	var symKey []byte
-	for i := range recipients {
-		if recipients[i].PubKey == string(d.encryptionPublicKey) {
-			symKey = recipients[i].SymmetricKey
-			break
-		}
-	}
-
-	if symKey == nil {
-		return nil, ErrNotInRecipients
-	}
-
-	return encryption.Decrypt(d.encryptionPrivateKey, append(symKey, data...))
 }
