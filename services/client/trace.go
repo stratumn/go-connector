@@ -75,8 +75,6 @@ func (c *client) decryptLinks(ctx context.Context, v reflect.Value) {
 			c.decryptLinks(ctx, iter.Value())
 		}
 	}
-
-	return
 }
 
 // Check if the value contains a link and decrypt its data if possible.
