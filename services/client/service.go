@@ -78,7 +78,7 @@ func (s *Service) SetConfig(config interface{}) error {
 // Needs returns the set of services this service depends on.
 func (s *Service) Needs() map[string]struct{} {
 	needs := map[string]struct{}{}
-	needs["decryption"] = struct{}{}
+	needs[s.config.Decryption] = struct{}{}
 
 	return needs
 }
@@ -103,7 +103,7 @@ func (s *Service) Expose() interface{} {
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	s.client = newClient(s.config.TraceURL, s.config.AccountURL, []byte(s.config.SigningPrivateKey))
+	s.client = newClient(s.config.TraceURL, s.config.AccountURL, []byte(s.config.SigningPrivateKey), s.decryptor)
 
 	running()
 	<-ctx.Done()
