@@ -74,7 +74,11 @@ func (s *Service) Expose() interface{} {
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	s.decryptor = newDecryptor([]byte(s.config.EncryptionPrivateKey))
+	d, err := newDecryptor([]byte(s.config.EncryptionPrivateKey))
+	if err != nil {
+		return err
+	}
+	s.decryptor = d
 
 	running()
 	<-ctx.Done()
