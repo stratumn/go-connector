@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go-connector/services/decryption"
 	"net/http"
 	"time"
 
@@ -21,6 +22,7 @@ type client struct {
 	urlTrace   string
 	urlAccount string
 	httpClient *http.Client
+	decryptor  decryption.Decryptor
 
 	// The PEM encoded signing private key of the conenctor.
 	signingPrivateKey []byte
@@ -28,13 +30,14 @@ type client struct {
 	authToken string
 }
 
-func newClient(traceURL string, accountURL string, signingPrivateKey []byte) StratumnClient {
+func newClient(traceURL string, accountURL string, signingPrivateKey []byte, decryptor decryption.Decryptor) StratumnClient {
 	httpClient := &http.Client{Timeout: time.Second * 10}
 
 	return &client{
 		urlTrace:          traceURL,
 		urlAccount:        accountURL,
 		httpClient:        httpClient,
+		decryptor:         decryptor,
 		signingPrivateKey: signingPrivateKey,
 	}
 }

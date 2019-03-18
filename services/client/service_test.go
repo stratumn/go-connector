@@ -12,8 +12,11 @@ import (
 	"time"
 
 	"go-connector/services/client"
+	"go-connector/services/decryption"
+	"go-connector/services/decryption/mockdecryptor"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang/mock/gomock"
 	"github.com/stratumn/go-crypto/keys"
 	"github.com/stratumn/go-crypto/signatures"
 	"github.com/stretchr/testify/assert"
@@ -37,8 +40,8 @@ func TestClientService_TraceClient(t *testing.T) {
 		IssuedAt:  time.Now().Unix() - 1000,
 	}).SignedString([]byte("plap"))
 
-	traceServer := createMockServer(t, token, 0)
-	accountServer := createMockServer(t, token, 1)
+	traceServer := createMockServer(t, token, 0, `{"data": {"value": "42"}}`)
+	accountServer := createMockServer(t, token, 1, "")
 
 	defer traceServer.Close()
 	defer accountServer.Close()
@@ -80,7 +83,7 @@ func TestClientService_AccountClient(t *testing.T) {
 		IssuedAt:  time.Now().Unix() - 1000,
 	}).SignedString([]byte("plap"))
 
-	ts := createMockServer(t, token, 1)
+	ts := createMockServer(t, token, 1, `{"data": {"value": "42"}}`)
 
 	defer ts.Close()
 
@@ -121,7 +124,7 @@ func TestClientService_TokenExpired(t *testing.T) {
 		IssuedAt:  time.Now().Unix() - 1000,
 	}).SignedString([]byte("plap"))
 
-	ts := createMockServer(t, token, 2)
+	ts := createMockServer(t, token, 2, `{"data": {"value": "42"}}`)
 
 	defer ts.Close()
 
@@ -156,11 +159,184 @@ func TestClientService_TokenExpired(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestClientService_LinkDecryption(t *testing.T) {
+	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+		ExpiresAt: time.Now().Unix() + 1000,
+		IssuedAt:  time.Now().Unix() - 1000,
+	}).SignedString([]byte("plap"))
+
+	linkData := []byte("https://bit.ly/1nab8Fa")
+	encLinkData, _ := base64.StdEncoding.DecodeString("aHR0cHM6Ly9iaXQubHkvMW5hYjhGYQo=")
+	recipients := []*decryption.Recipient{&decryption.Recipient{PubKey: "plap", SymmetricKey: []byte("zou")}}
+	link := map[string]interface{}{
+		"data": encLinkData,
+		"meta": map[string]interface{}{"recipients": recipients},
+	}
+
+	rb, _ := json.Marshal(link)
+	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(rb)))
+	accountServer := createMockServer(t, token, 1, "")
+
+	defer traceServer.Close()
+	defer accountServer.Close()
+
+	config := client.Config{
+		TraceURL:          traceServer.URL,
+		AccountURL:        accountServer.URL,
+		SigningPrivateKey: key,
+		Decryption:        "decryption",
+	}
+
+	s := &client.Service{}
+	s.SetConfig(config)
+
+	ctrl := gomock.NewController(t)
+	mockDec := mockdecryptor.NewMockDecryptor(ctrl)
+
+	s.Plug(map[string]interface{}{"decryption": mockDec})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runningCh := make(chan struct{})
+
+	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+	<-runningCh
+
+	c := s.Expose().(client.StratumnClient)
+
+	t.Run("struct with string data", func(t *testing.T) {
+		var rsp struct {
+			Link struct {
+				Data string
+				Meta struct {
+					Recipients []*decryption.Recipient
+				}
+			}
+		}
+
+		mockDec.EXPECT().DecryptLinkData(ctx, encLinkData, recipients).Times(1).Return(linkData, nil)
+
+		err := c.CallTraceGql(ctx, q, v, &rsp)
+		assert.NoError(t, err)
+		assert.Equal(t, string(linkData), rsp.Link.Data)
+	})
+
+	t.Run("struct with []byte data", func(t *testing.T) {
+		var rsp struct {
+			Link struct {
+				Data []byte
+				Meta struct {
+					Recipients []*decryption.Recipient
+				}
+			}
+		}
+
+		mockDec.EXPECT().DecryptLinkData(ctx, encLinkData, recipients).Times(1).Return(linkData, nil)
+
+		err := c.CallTraceGql(ctx, q, v, &rsp)
+		assert.NoError(t, err)
+		assert.Equal(t, linkData, rsp.Link.Data)
+	})
+
+	t.Run("struct with interface data", func(t *testing.T) {
+		var rsp struct {
+			Link struct {
+				Data interface{}
+				Meta struct {
+					Recipients []*decryption.Recipient
+				}
+			}
+		}
+
+		mockDec.EXPECT().DecryptLinkData(ctx, encLinkData, recipients).Times(1).Return(linkData, nil)
+
+		err := c.CallTraceGql(ctx, q, v, &rsp)
+		assert.NoError(t, err)
+		assert.Equal(t, linkData, rsp.Link.Data)
+	})
+
+	t.Run("interface", func(t *testing.T) {
+		// In this case, the response will be unmarshaled into maps.
+		var rsp interface{}
+
+		mockDec.EXPECT().DecryptLinkData(ctx, encLinkData, recipients).Times(1).Return(linkData, nil)
+
+		err := c.CallTraceGql(ctx, q, v, &rsp)
+		r := rsp.(map[string]interface{})
+		l := r["link"].(map[string]interface{})
+
+		assert.NoError(t, err)
+		assert.Equal(t, linkData, l["data"])
+	})
+}
+
+func TestClientService_NoLinkDecryption(t *testing.T) {
+	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+		ExpiresAt: time.Now().Unix() + 1000,
+		IssuedAt:  time.Now().Unix() - 1000,
+	}).SignedString([]byte("plap"))
+
+	encLinkData, _ := base64.StdEncoding.DecodeString("aHR0cHM6Ly9iaXQubHkvMW5hYjhGYQo=")
+	recipients := []*decryption.Recipient{}
+	link := map[string]interface{}{
+		"data": encLinkData,
+		"meta": map[string]interface{}{"recipients": recipients},
+	}
+
+	rb, _ := json.Marshal(link)
+	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(rb)))
+	accountServer := createMockServer(t, token, 1, "")
+
+	defer traceServer.Close()
+	defer accountServer.Close()
+
+	config := client.Config{
+		TraceURL:          traceServer.URL,
+		AccountURL:        accountServer.URL,
+		SigningPrivateKey: key,
+		Decryption:        "decryption",
+	}
+
+	s := &client.Service{}
+	s.SetConfig(config)
+
+	ctrl := gomock.NewController(t)
+	mockDec := mockdecryptor.NewMockDecryptor(ctrl)
+
+	s.Plug(map[string]interface{}{"decryption": mockDec})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runningCh := make(chan struct{})
+
+	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+	<-runningCh
+
+	c := s.Expose().(client.StratumnClient)
+
+	var rsp struct {
+		Link struct {
+			Data []byte
+			Meta struct {
+				Recipients []*decryption.Recipient
+			}
+		}
+	}
+
+	mockDec.EXPECT().DecryptLinkData(ctx, encLinkData, recipients).Times(0)
+
+	err := c.CallTraceGql(ctx, q, v, &rsp)
+	assert.NoError(t, err)
+	assert.Equal(t, encLinkData, rsp.Link.Data)
+}
+
 // ============================================================================
 // 																	Helpers
 // ============================================================================
 
-func createMockServer(t *testing.T, token string, maxLogin int) *httptest.Server {
+func createMockServer(t *testing.T, token string, maxLogin int, rsp string) *httptest.Server {
 
 	cntLogin := 0
 
@@ -199,7 +375,7 @@ func createMockServer(t *testing.T, token string, maxLogin int) *httptest.Server
 			assert.Equal(t, q, req["query"])
 			assert.Equal(t, v, req["variables"])
 
-			fmt.Fprintln(w, `{"data": {"value": "42"}}`)
+			fmt.Fprintln(w, rsp)
 			return
 		}
 	}))

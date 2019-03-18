@@ -103,7 +103,7 @@ func (s *Service) Expose() interface{} {
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	s.client = newClient(s.config.TraceURL, s.config.AccountURL, []byte(s.config.SigningPrivateKey))
+	s.client = newClient(s.config.TraceURL, s.config.AccountURL, []byte(s.config.SigningPrivateKey), s.decryptor)
 
 	running()
 	<-ctx.Done()
