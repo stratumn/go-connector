@@ -78,7 +78,7 @@ func (s *Service) SetConfig(config interface{}) error {
 // Needs returns the set of services this service depends on.
 func (s *Service) Needs() map[string]struct{} {
 	needs := map[string]struct{}{}
-	needs["decryption"] = struct{}{}
+	needs[s.config.Decryption] = struct{}{}
 
 	return needs
 }

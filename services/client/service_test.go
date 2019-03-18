@@ -173,8 +173,8 @@ func TestClientService_LinkDecryption(t *testing.T) {
 		"meta": map[string]interface{}{"recipients": recipients},
 	}
 
-	rb, _ := json.Marshal(link)
-	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(rb)))
+	lb, _ := json.Marshal(link)
+	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
 	accountServer := createMockServer(t, token, 1, "")
 
 	defer traceServer.Close()
@@ -271,6 +271,78 @@ func TestClientService_LinkDecryption(t *testing.T) {
 	})
 }
 
+func TestClientService_LinkListDecryption(t *testing.T) {
+	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+		ExpiresAt: time.Now().Unix() + 1000,
+		IssuedAt:  time.Now().Unix() - 1000,
+	}).SignedString([]byte("plap"))
+
+	linkData1 := []byte("https://bit.ly/1nab8Fa")
+	encLinkData1, _ := base64.StdEncoding.DecodeString("aHR0cHM6Ly9iaXQubHkvMW5hYjhGYQo=")
+	recipients := []*decryption.Recipient{&decryption.Recipient{PubKey: "plap", SymmetricKey: []byte("zou")}}
+	link1 := map[string]interface{}{
+		"data": encLinkData1,
+		"meta": map[string]interface{}{"recipients": recipients},
+	}
+
+	linkData2 := []byte("https://bit.ly/IqT6zt")
+	encLinkData2, _ := base64.StdEncoding.DecodeString("aHR0cHM6Ly9iaXQubHkvSXFUNnp0Cg==")
+	link2 := map[string]interface{}{
+		"data": encLinkData2,
+		"meta": map[string]interface{}{"recipients": recipients},
+	}
+
+	lb1, _ := json.Marshal(link1)
+	lb2, _ := json.Marshal(link2)
+	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"links": [%s, %s]}}`, string(lb1), string(lb2)))
+	accountServer := createMockServer(t, token, 1, "")
+
+	defer traceServer.Close()
+	defer accountServer.Close()
+
+	config := client.Config{
+		TraceURL:          traceServer.URL,
+		AccountURL:        accountServer.URL,
+		SigningPrivateKey: key,
+		Decryption:        "decryption",
+	}
+
+	s := &client.Service{}
+	s.SetConfig(config)
+
+	ctrl := gomock.NewController(t)
+	mockDec := mockdecryptor.NewMockDecryptor(ctrl)
+
+	s.Plug(map[string]interface{}{"decryption": mockDec})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runningCh := make(chan struct{})
+
+	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+	<-runningCh
+
+	c := s.Expose().(client.StratumnClient)
+
+	var rsp struct {
+		Links []struct {
+			Data string
+			Meta struct {
+				Recipients []*decryption.Recipient
+			}
+		}
+	}
+
+	mockDec.EXPECT().DecryptLinkData(ctx, encLinkData1, recipients).Times(1).Return(linkData1, nil)
+	mockDec.EXPECT().DecryptLinkData(ctx, encLinkData2, recipients).Times(1).Return(linkData2, nil)
+
+	err := c.CallTraceGql(ctx, q, v, &rsp)
+	assert.NoError(t, err)
+	assert.Equal(t, string(linkData1), rsp.Links[0].Data)
+	assert.Equal(t, string(linkData2), rsp.Links[1].Data)
+}
+
 func TestClientService_NoLinkDecryption(t *testing.T) {
 	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
 		ExpiresAt: time.Now().Unix() + 1000,
@@ -284,8 +356,8 @@ func TestClientService_NoLinkDecryption(t *testing.T) {
 		"meta": map[string]interface{}{"recipients": recipients},
 	}
 
-	rb, _ := json.Marshal(link)
-	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(rb)))
+	lb, _ := json.Marshal(link)
+	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
 	accountServer := createMockServer(t, token, 1, "")
 
 	defer traceServer.Close()

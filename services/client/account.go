@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -30,7 +29,7 @@ type tokenBody struct {
 }
 
 func (c *client) login(ctx context.Context) (string, error) {
-	log.Println("Login")
+	log.Info("Login")
 
 	tb := tokenBody{
 		Iat: time.Now().Unix(),

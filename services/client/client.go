@@ -9,8 +9,12 @@ import (
 	"net/http"
 	"time"
 
+	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 )
+
+// log is the logger for the protocol.
+var log = logging.Logger("client")
 
 // StratumnClient is the client interface to Stratumn services.
 type StratumnClient interface {

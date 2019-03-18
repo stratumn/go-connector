@@ -66,6 +66,7 @@ func (c *client) decryptLinks(ctx context.Context, v reflect.Value) {
 		for i := 0; i < v.NumField(); i++ {
 			c.decryptLinks(ctx, v.Field(i))
 		}
+		return
 	}
 
 	// If v is a map, iterate over all of its values.
@@ -74,6 +75,7 @@ func (c *client) decryptLinks(ctx context.Context, v reflect.Value) {
 		for iter.Next() {
 			c.decryptLinks(ctx, iter.Value())
 		}
+		return
 	}
 }
 
@@ -98,7 +100,7 @@ func (c *client) parseAndDecryptLink(ctx context.Context, v reflect.Value) {
 
 	d, err := c.decryptor.DecryptLinkData(ctx, link.Data, link.Meta.Recipients)
 	if err != nil {
-		panic(err)
+		log.Error("could not decrypt link data: %s", err.Error())
 	}
 
 	// Set the link data.
