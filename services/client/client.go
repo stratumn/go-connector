@@ -13,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate mockgen -package mockclient -destination mockclient/mockclient.go go-connector/services/client StratumnClient
+
 // log is the logger for the protocol.
 var log = logging.Logger("client")
 

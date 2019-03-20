@@ -10,8 +10,8 @@ import (
 	"github.com/stratumn/go-node/core/cfg"
 )
 
-// DefaultPollInterval is the default interval at which the livesync service calls Startumn APIs
-const DefaultPollInterval = 10 * time.Second
+// DefaultPollInterval is the default interval at which the livesync service calls Startumn APIs (in milliseconds).
+const DefaultPollInterval = 10000
 
 var (
 	// ErrNotClient is returned when the connected service is not a stratumn client.
@@ -30,8 +30,8 @@ type Config struct {
 	// ConfigVersion is the version of the configuration file.
 	ConfigVersion int `toml:"configuration_version" comment:"The version of the service configuration."`
 
-	PollInterval     time.Duration `toml:"poll_interval" comment:"The frenquency at which the livesync service polls data from Stratumn APIs."`
-	WatchedWorkflows []uint        `toml:"watched_workflows" comment:"The IDs of the workflows to synchronize data from."`
+	PollInterval     uint   `toml:"poll_interval" comment:"The frenquency (in milliseconds) at which the livesync service polls data from Stratumn APIs."`
+	WatchedWorkflows []uint `toml:"watched_workflows" comment:"The IDs of the workflows to synchronize data from."`
 }
 
 // ID returns the unique identifier of the service.
@@ -83,7 +83,7 @@ func (s *Service) Plug(exposed map[string]interface{}) error {
 		return errors.Wrap(ErrNotClient, "stratumnClient")
 	}
 
-	s.synchronizer = newSycnhronizer(stratumnClient, s.config.WatchedWorkflows)
+	s.synchronizer = NewSycnhronizer(stratumnClient, s.config.WatchedWorkflows)
 
 	return nil
 }
@@ -96,7 +96,7 @@ func (s *Service) Expose() interface{} {
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	ticker := time.NewTicker(time.Second * s.config.PollInterval)
+	ticker := time.NewTicker(time.Millisecond * time.Duration(s.config.PollInterval))
 
 	running()
 

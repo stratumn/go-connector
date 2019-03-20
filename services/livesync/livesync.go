@@ -2,13 +2,16 @@ package livesync
 
 import (
 	"context"
-	"go-connector/services/client"
-	"log"
 
+	"go-connector/services/client"
+
+	logging "github.com/ipfs/go-log"
 	cs "github.com/stratumn/go-chainscript"
 )
 
 //go:generate mockgen -package mocksynchronizer -destination mocksynchronizer/mocksynchronizer.go go-connector/services/livesync Synchronizer
+
+var log = logging.Logger("livesync")
 
 // Synchronizer is the type exposed by the livesync service.
 type Synchronizer interface {
@@ -25,13 +28,13 @@ type synchronizer struct {
 }
 
 type workflowState struct {
-	// The IDs of the workflows to pull links from.
+	// The ID of the workflow to pull links from.
 	id uint
 	// Cursor of the last synced link.
 	endCursor string
 }
 
-func newSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) *synchronizer {
+func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) *synchronizer {
 	states := make([]*workflowState, len(watchedWorkflows))
 	for i, w := range watchedWorkflows {
 		states[i] = &workflowState{
@@ -82,6 +85,7 @@ func (s *synchronizer) Register() <-chan []*cs.Link {
 	return newCh
 }
 
+// pollAndNotify fetches all the missing links from the given workflows.
 func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 	if len(s.workflowStates) == 0 {
 		return nil
@@ -91,27 +95,28 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 		variables := map[string]interface{}{
 			"id": w.id,
 		}
+		// the cursor acts as an offset to fetch links from.
 		if w.endCursor != "" {
 			variables["cursor"] = w.endCursor
 		}
 		rsp := rspData{}
-		err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
 
+		err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
 		if err != nil {
 			return err
 		}
-
-		links := make([]*cs.Link, 0)
-		for _, link := range rsp.WorkflowByRowID.Links.Nodes {
-			links = append(links, link.Raw)
+		links := make([]*cs.Link, len(rsp.WorkflowByRowID.Links.Nodes))
+		for i, link := range rsp.WorkflowByRowID.Links.Nodes {
+			links[i] = link.Raw
 		}
 		if len(links) > 0 {
-			log.Printf("Synced %d links\n", len(links))
+			log.Infof("Synced %d links\n", len(links))
+			// remember the cursor of the last returned link.
 			w.endCursor = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
-		}
-
-		for _, service := range s.registeredServices {
-			service <- links
+			// send the synced links to the registered services.
+			for _, service := range s.registeredServices {
+				service <- links
+			}
 		}
 
 	}
