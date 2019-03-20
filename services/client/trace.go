@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"go-connector/services/decryption"
+	"github.com/stratumn/go-connector/services/decryption"
 )
 
 // TraceClient defines all the possible interactions with Trace.

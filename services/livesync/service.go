@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"go-connector/services/client"
+	"github.com/stratumn/go-connector/services/client"
 
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"

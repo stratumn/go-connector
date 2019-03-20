@@ -10,7 +10,7 @@ import (
 	"github.com/stratumn/go-crypto/keys"
 )
 
-//go:generate mockgen -package mockdecryptor -destination mockdecryptor/mockdecryptor.go go-connector/services/decryption Decryptor
+//go:generate mockgen -package mockdecryptor -destination mockdecryptor/mockdecryptor.go github.com/stratumn/go-connector/services/decryption Decryptor
 
 var (
 	// ErrNotInRecipients is returned when the connector is not one

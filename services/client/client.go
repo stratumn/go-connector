@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go-connector/services/decryption"
 	"net/http"
 	"time"
+
+	"github.com/stratumn/go-connector/services/decryption"
 
 	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"

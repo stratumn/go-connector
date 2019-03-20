@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"go-connector/services/client"
-	"go-connector/services/decryption"
-	"go-connector/services/decryption/mockdecryptor"
+	"github.com/stratumn/go-connector/services/client"
+	"github.com/stratumn/go-connector/services/decryption"
+	"github.com/stratumn/go-connector/services/decryption/mockdecryptor"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/golang/mock/gomock"
