@@ -11,6 +11,9 @@ import (
 
 //go:generate mockgen -package mocksynchronizer -destination mocksynchronizer/mocksynchronizer.go github.com/stratumn/go-connector/services/livesync Synchronizer
 
+// DefaultPagination is the number of links fetched by API call.
+const DefaultPagination = 50
+
 var log = logging.Logger("livesync")
 
 // Synchronizer is the type exposed by the livesync service.
@@ -24,7 +27,7 @@ type synchronizer struct {
 	// The syncing state of the watched workflows.
 	workflowStates []*workflowState
 	// Services subscribing to links updates.
-	registeredServices []chan []*cs.Link
+	registeredServices []chan<- []*cs.Link
 }
 
 type workflowState struct {
@@ -34,7 +37,8 @@ type workflowState struct {
 	endCursor string
 }
 
-func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) *synchronizer {
+// NewSycnhronizer returns a new Synchronizer
+func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) Synchronizer {
 	states := make([]*workflowState, len(watchedWorkflows))
 	for i, w := range watchedWorkflows {
 		states[i] = &workflowState{
@@ -52,7 +56,8 @@ type rspData struct {
 		Name  string
 		Links struct {
 			PageInfo struct {
-				EndCursor string
+				EndCursor   string
+				HasNextPage bool
 			}
 			Nodes []struct {
 				Raw *cs.Link
@@ -64,15 +69,17 @@ type rspData struct {
 const pollQuery = `query workflowLinks(
 	$id: BigInt!
 	$cursor: Cursor
+	$limit: Int!
   ) {
 	workflowByRowId(rowId: $id) {
 	  id
 	  name
-	  links(after: $cursor) {
+	  links(after: $cursor, first: $pagination) {
 		nodes {
 			raw
 		}
 		pageInfo {
+		  hasNextPage
 		  endCursor
 	    }
 	  }
@@ -87,38 +94,40 @@ func (s *synchronizer) Register() <-chan []*cs.Link {
 
 // pollAndNotify fetches all the missing links from the given workflows.
 func (s *synchronizer) pollAndNotify(ctx context.Context) error {
-	if len(s.workflowStates) == 0 {
-		return nil
-	}
-
 	for _, w := range s.workflowStates {
 		variables := map[string]interface{}{
-			"id": w.id,
+			"id":    w.id,
+			"limit": DefaultPagination,
 		}
-		// the cursor acts as an offset to fetch links from.
-		if w.endCursor != "" {
-			variables["cursor"] = w.endCursor
-		}
-		rsp := rspData{}
 
-		err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
-		if err != nil {
-			return err
-		}
-		links := make([]*cs.Link, len(rsp.WorkflowByRowID.Links.Nodes))
-		for i, link := range rsp.WorkflowByRowID.Links.Nodes {
-			links[i] = link.Raw
-		}
-		if len(links) > 0 {
-			log.Infof("Synced %d links\n", len(links))
-			// remember the cursor of the last returned link.
-			w.endCursor = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
-			// send the synced links to the registered services.
-			for _, service := range s.registeredServices {
-				service <- links
+		rsp := rspData{}
+		rsp.WorkflowByRowID.Links.PageInfo.HasNextPage = true
+		for rsp.WorkflowByRowID.Links.PageInfo.HasNextPage {
+			// the cursor acts as an offset to fetch links from.
+			if w.endCursor != "" {
+				variables["cursor"] = w.endCursor
+			}
+
+			err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
+			if err != nil {
+				return err
+			}
+
+			links := make([]*cs.Link, len(rsp.WorkflowByRowID.Links.Nodes))
+			for i, link := range rsp.WorkflowByRowID.Links.Nodes {
+				links[i] = link.Raw
+			}
+
+			if len(links) > 0 {
+				log.Infof("Synced %d links\n", len(links))
+				// remember the cursor of the last returned link.
+				w.endCursor = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
+				// send the synced links to the registered services.
+				for _, service := range s.registeredServices {
+					service <- links
+				}
 			}
 		}
-
 	}
 	return nil
 }

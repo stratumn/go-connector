@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	rspData1 = `{"workflowByRowId":{"id":"WORKFLOWID1","name":"Some Workflow","links":{"pageInfo":{"endCursor":"endCursor"},"nodes":[{"id":"ID1","raw":{"data":"data","meta":{"data":"metadata","mapId":"06d158e6-9cd0-460a-8ef9-fac1b7883fbc"},"version":"1.0.0","signatures":[]}},{"id":"ID2","raw":{"data":"data","meta":{"data":"metadata","mapId":"06d158e6-9cd0-460a-8ef9-fac1b7883fbc","prevLinkHash":"KfaCRwiJAN9QpYKc3q9+/ryIKhdjD7DdhmaCMkQPwyc="},"version":"1.0.0","signatures":[]}}]}}}`
-	rspData2 = `{"workflowByRowId":{"id":"WORKFLOWID1","name":"Some Workflow","links":{"pageInfo":{"endCursor":"endCursor"},"nodes":[{"id":"ID1","raw":{"data":"data","meta":{"data":"metadata","mapId":"06d158e6-9cd0-460a-8ef9-fac1b7883fbc"},"version":"1.0.0","signatures":[]}}]}}}`
+	rspData1 = `{"workflowByRowId":{"id":"WORKFLOWID1","name":"Some Workflow","links":{"pageInfo":{"endCursor":"endCursor","hasNextPage":true},"nodes":[{"id":"ID1","raw":{"data":"data","meta":{"data":"metadata","mapId":"06d158e6-9cd0-460a-8ef9-fac1b7883fbc"},"version":"1.0.0","signatures":[]}},{"id":"ID2","raw":{"data":"data","meta":{"data":"metadata","mapId":"06d158e6-9cd0-460a-8ef9-fac1b7883fbc","prevLinkHash":"KfaCRwiJAN9QpYKc3q9+/ryIKhdjD7DdhmaCMkQPwyc="},"version":"1.0.0","signatures":[]}}]}}}`
+	rspData2 = `{"workflowByRowId":{"id":"WORKFLOWID1","name":"Some Workflow","links":{"pageInfo":{"endCursor":"endCursor", "hasNextPage":false},"nodes":[{"id":"ID1","raw":{"data":"data","meta":{"data":"metadata","mapId":"06d158e6-9cd0-460a-8ef9-fac1b7883fbc"},"version":"1.0.0","signatures":[]}}]}}}`
+	rspData3 = `{"workflowByRowId":{"id":"WORKFLOWID1","name":"Some Workflow","links":{"pageInfo":{"endCursor":"endCursor", "hasNextPage":false}}}}`
 )
 
 var (
@@ -52,20 +53,25 @@ func TestLivesyncService(t *testing.T) {
 
 		synchronizer := s.Expose().(livesync.Synchronizer)
 
-		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": watchedWorkflows[0]}), gomock.Any()).
+		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": watchedWorkflows[0], "limit": livesync.DefaultPagination}), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
 				err := json.Unmarshal([]byte(rspData1), rsp)
 				assert.NoError(t, err)
 				return nil
 			}).Times(1)
 
-		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": watchedWorkflows[0], "cursor": "endCursor"}), gomock.Any()).
+		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": watchedWorkflows[0], "cursor": "endCursor", "limit": livesync.DefaultPagination}), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
 				err := json.Unmarshal([]byte(rspData2), rsp)
 				assert.NoError(t, err)
 				return nil
 			}).Times(1)
-		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": watchedWorkflows[1]}), gomock.Any()).Times(2).Return(nil)
+		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": watchedWorkflows[1], "limit": livesync.DefaultPagination}), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
+				err := json.Unmarshal([]byte(rspData3), rsp)
+				assert.NoError(t, err)
+				return nil
+			}).Times(2)
 
 		updates := synchronizer.Register()
 
