@@ -7,11 +7,11 @@ import (
 	ossignal "os/signal"
 	"syscall"
 
-	"go-connector/services/client"
-	"go-connector/services/decryption"
-	"go-connector/services/livesync"
-	"go-connector/services/memorystore"
-	"go-connector/services/parser"
+	"github.com/stratumn/go-connector/services/client"
+	"github.com/stratumn/go-connector/services/decryption"
+	"github.com/stratumn/go-connector/services/livesync"
+	"github.com/stratumn/go-connector/services/memorystore"
+	"github.com/stratumn/go-connector/services/parser"
 
 	"github.com/pkg/errors"
 

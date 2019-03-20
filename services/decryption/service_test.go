@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"go-connector/services/decryption"
+	"github.com/stratumn/go-connector/services/decryption"
 
 	cs "github.com/stratumn/go-chainscript"
 	"github.com/stratumn/go-crypto/aes"

@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 
-	"go-connector/services/decryption"
+	"github.com/stratumn/go-connector/services/decryption"
 
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"

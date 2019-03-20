@@ -9,7 +9,7 @@ import (
 
 	cs "github.com/stratumn/go-chainscript"
 
-	"go-connector/services/livesync"
+	"github.com/stratumn/go-connector/services/livesync"
 )
 
 var (

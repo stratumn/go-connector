@@ -3,7 +3,7 @@ package parser
 import (
 	"context"
 
-	"go-connector/services/livesync"
+	"github.com/stratumn/go-connector/services/livesync"
 
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"

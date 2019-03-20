@@ -13,9 +13,9 @@ import (
 	// "github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
 
-	"go-connector/services/livesync/mocksynchronizer"
-	"go-connector/services/memorystore/mockmemorystore"
-	"go-connector/services/parser"
+	"github.com/stratumn/go-connector/services/livesync/mocksynchronizer"
+	"github.com/stratumn/go-connector/services/memorystore/mockmemorystore"
+	"github.com/stratumn/go-connector/services/parser"
 )
 
 func TestParserService(t *testing.T) {

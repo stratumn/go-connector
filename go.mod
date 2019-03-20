@@ -1,4 +1,4 @@
-module go-connector
+module github.com/stratumn/go-connector
 
 go 1.12
 

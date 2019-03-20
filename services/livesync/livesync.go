@@ -5,7 +5,7 @@ import (
 	cs "github.com/stratumn/go-chainscript"
 )
 
-//go:generate mockgen -package mocksynchronizer -destination mocksynchronizer/mocksynchronizer.go go-connector/services/livesync Synchronizer
+//go:generate mockgen -package mocksynchronizer -destination mocksynchronizer/mocksynchronizer.go github.com/stratumn/go-connector/services/livesync Synchronizer
 
 // Synchronizer is the type exposed by the livesync service.
 type Synchronizer interface {
