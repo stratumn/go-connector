@@ -10,8 +10,8 @@ import (
 	"github.com/stratumn/go-node/core/cfg"
 )
 
-// DefaultPollInterval is the default interval at which the livesync service calls Startumn APIs
-const DefaultPollInterval = 10 * time.Second
+// DefaultPollInterval is the default interval at which the livesync service calls Startumn APIs (in milliseconds).
+const DefaultPollInterval = 10000
 
 var (
 	// ErrNotClient is returned when the connected service is not a stratumn client.
@@ -22,7 +22,6 @@ var (
 type Service struct {
 	config *Config
 
-	client       client.StratumnClient
 	synchronizer *synchronizer
 }
 
@@ -31,7 +30,8 @@ type Config struct {
 	// ConfigVersion is the version of the configuration file.
 	ConfigVersion int `toml:"configuration_version" comment:"The version of the service configuration."`
 
-	PollInterval time.Duration `toml:"poll_interval" comment:"The frenquency at which the livesync service polls data from Stratumn APIs."`
+	PollInterval     time.Duration `toml:"poll_interval" comment:"The frenquency (in milliseconds) at which the livesync service polls data from Stratumn APIs."`
+	WatchedWorkflows []uint        `toml:"watched_workflows" comment:"The IDs of the workflows to synchronize data from."`
 }
 
 // ID returns the unique identifier of the service.
@@ -78,10 +78,12 @@ func (s *Service) Needs() map[string]struct{} {
 // Plug sets the connected services.
 func (s *Service) Plug(exposed map[string]interface{}) error {
 	var ok bool
-
-	if s.client, ok = exposed["stratumnClient"].(client.StratumnClient); !ok {
+	var stratumnClient client.StratumnClient
+	if stratumnClient, ok = exposed["stratumnClient"].(client.StratumnClient); !ok {
 		return errors.Wrap(ErrNotClient, "stratumnClient")
 	}
+
+	s.synchronizer = NewSycnhronizer(stratumnClient, s.config.WatchedWorkflows).(*synchronizer)
 
 	return nil
 }
@@ -94,8 +96,7 @@ func (s *Service) Expose() interface{} {
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	s.synchronizer = &synchronizer{}
-	ticker := time.NewTicker(time.Second * s.config.PollInterval)
+	ticker := time.NewTicker(time.Millisecond * s.config.PollInterval)
 
 	running()
 
@@ -103,7 +104,7 @@ RUN_LOOP:
 	for {
 		select {
 		case <-ticker.C:
-			err := s.synchronizer.pollAndNotify()
+			err := s.synchronizer.pollAndNotify(ctx)
 			if err != nil {
 				stopping()
 				return err

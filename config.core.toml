@@ -119,8 +119,11 @@
   # The version of the service configuration.
   configuration_version = 1
 
-  # The frenquency at which the livesync service polls data from Stratumn APIs.
-  poll_interval = 1
+  # The frenquency (in milliseconds) at which the livesync service polls data from Stratumn APIs.
+  poll_interval = 1000
+
+  # The IDs of the workflows to synchronize data from.
+  watched_workflows = []
 
 # Settings for the log module.
 [log]
