@@ -3,7 +3,7 @@ package livesync
 import (
 	"context"
 
-	"go-connector/services/client"
+	"github.com/stratumn/go-connector/services/client"
 
 	logging "github.com/ipfs/go-log"
 	cs "github.com/stratumn/go-chainscript"
@@ -74,7 +74,7 @@ const pollQuery = `query workflowLinks(
 	workflowByRowId(rowId: $id) {
 	  id
 	  name
-	  links(after: $cursor, first: $pagination) {
+	  links(after: $cursor, first: $limit) {
 		nodes {
 			raw
 		}

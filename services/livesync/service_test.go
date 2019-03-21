@@ -3,13 +3,13 @@ package livesync_test
 import (
 	"context"
 	"encoding/json"
-	"go-connector/services/livesync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 
-	"go-connector/services/client/mockclient"
+	"github.com/stratumn/go-connector/services/client/mockclient"
+	"github.com/stratumn/go-connector/services/livesync"
 
 	"github.com/stretchr/testify/assert"
 )
