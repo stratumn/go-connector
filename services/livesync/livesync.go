@@ -2,6 +2,7 @@ package livesync
 
 import (
 	"context"
+	"strings"
 
 	"github.com/stratumn/go-connector/services/client"
 
@@ -18,32 +19,32 @@ var log = logging.Logger("livesync")
 
 // Synchronizer is the type exposed by the livesync service.
 type Synchronizer interface {
-	Register() <-chan []*cs.Link
+	Register(WorkflowStates) <-chan []*cs.Link
 }
 
 type synchronizer struct {
 	client client.StratumnClient
 
 	// The syncing state of the watched workflows.
-	workflowStates []*workflowState
+	workflowStates WorkflowStates
 	// Services subscribing to links updates.
-	registeredServices []chan<- []*cs.Link
+	registeredServices []*listener
 }
 
-type workflowState struct {
-	// The ID of the workflow to pull links from.
-	id uint
-	// Cursor of the last synced link.
-	endCursor string
+// WorkflowStates maps the ID of the workflow to the cursor of the last synced link.
+type WorkflowStates map[uint]string
+
+type listener struct {
+	states   WorkflowStates
+	listener chan<- []*cs.Link
 }
 
-// NewSycnhronizer returns a new Synchronizer
+// NewSycnhronizer returns a new Synchronizer.
+// It takes a stratumn client and a list of workflows to sync with.
 func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) Synchronizer {
-	states := make([]*workflowState, len(watchedWorkflows))
-	for i, w := range watchedWorkflows {
-		states[i] = &workflowState{
-			id: w,
-		}
+	states := WorkflowStates{}
+	for _, wfID := range watchedWorkflows {
+		states[wfID] = ""
 	}
 	return &synchronizer{
 		client:         client,
@@ -51,52 +52,31 @@ func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) Sync
 	}
 }
 
-type rspData struct {
-	WorkflowByRowID struct {
-		Name  string
-		Links struct {
-			PageInfo struct {
-				EndCursor   string
-				HasNextPage bool
-			}
-			Nodes []struct {
-				Raw *cs.Link
-			}
+// Register subscribes a listener to future updates.
+// The listener may pass a WorkflowStates object to specify which workflows it
+// wants to receive updates from and from which cursor it should receive updates.
+// If nil is passed, the listener will be notified of updates for all synced workflows.
+func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Link {
+	if states == nil {
+		states = WorkflowStates{}
+		for wfID := range s.workflowStates {
+			states[wfID] = ""
 		}
 	}
-}
 
-const pollQuery = `query workflowLinks(
-	$id: BigInt!
-	$cursor: Cursor
-	$limit: Int!
-  ) {
-	workflowByRowId(rowId: $id) {
-	  id
-	  name
-	  links(after: $cursor, first: $limit) {
-		nodes {
-			raw
-		}
-		pageInfo {
-		  hasNextPage
-		  endCursor
-	    }
-	  }
-	}
-  }`
-
-func (s *synchronizer) Register() <-chan []*cs.Link {
 	newCh := make(chan []*cs.Link)
-	s.registeredServices = append(s.registeredServices, newCh)
+	s.registeredServices = append(s.registeredServices, &listener{
+		listener: newCh,
+		states:   states,
+	})
 	return newCh
 }
 
 // pollAndNotify fetches all the missing links from the given workflows.
 func (s *synchronizer) pollAndNotify(ctx context.Context) error {
-	for _, w := range s.workflowStates {
+	for id := range s.workflowStates {
 		variables := map[string]interface{}{
-			"id":    w.id,
+			"id":    id,
 			"limit": DefaultPagination,
 		}
 
@@ -104,8 +84,8 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 		rsp.WorkflowByRowID.Links.PageInfo.HasNextPage = true
 		for rsp.WorkflowByRowID.Links.PageInfo.HasNextPage {
 			// the cursor acts as an offset to fetch links from.
-			if w.endCursor != "" {
-				variables["cursor"] = w.endCursor
+			if s.workflowStates[id] != "" {
+				variables["cursor"] = s.workflowStates[id]
 			}
 
 			err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
@@ -113,18 +93,26 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 				return err
 			}
 
-			links := make([]*cs.Link, len(rsp.WorkflowByRowID.Links.Nodes))
-			for i, link := range rsp.WorkflowByRowID.Links.Nodes {
-				links[i] = link.Raw
-			}
-
+			links := rsp.WorkflowByRowID.Links.Edges.Links()
 			if len(links) > 0 {
 				log.Infof("Synced %d links\n", len(links))
-				// remember the cursor of the last returned link.
-				w.endCursor = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
+				s.workflowStates[id] = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
 				// send the synced links to the registered services.
+				// compare the current cursor to the cursor specified by each service:
+				// - if the current cursor is anterior or equal, do not send any updates.
+				// - else send all the links starting from the service's cursor.
 				for _, service := range s.registeredServices {
-					service <- links
+					// if the service does not subscribe to this workflow, skip it.
+					if _, ok := service.states[id]; !ok {
+						continue
+					}
+					switch strings.Compare(s.workflowStates[id], service.states[id]) {
+					case -1, 0:
+						break
+					default:
+						service.listener <- rsp.WorkflowByRowID.Links.Edges.Slice(service.states[id])
+					}
+
 				}
 			}
 		}

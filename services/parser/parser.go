@@ -47,7 +47,8 @@ func (p *parser) saveLinks(links []*cs.Link) error {
 // run subscribes to the livesync service and waits for updates.
 // It returns an error in case the channel is closed.
 func (p *parser) run(ctx context.Context) error {
-	linkChan := p.synchronizer.Register()
+	// pass nil to subscribe to all updates
+	linkChan := p.synchronizer.Register(nil)
 
 	for {
 		select {
