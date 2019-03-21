@@ -159,7 +159,8 @@ func createEncryptedLink(t *testing.T, data map[string]interface{}, pks [][]byte
 	}
 
 	l, err := cs.NewLinkBuilder("p", "m").WithMetadata(md).Build()
-	l.Data = encData
+	require.NoError(t, err)
+	err = l.SetData(encData)
 	require.NoError(t, err)
 
 	return l
