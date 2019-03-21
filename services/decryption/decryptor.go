@@ -92,8 +92,13 @@ func (d *decryptor) DecryptLink(ctx context.Context, l *cs.Link) error {
 	if err != nil {
 		return err
 	}
+	var encData []byte
+	err = json.Unmarshal(l.GetData(), &encData)
+	if err != nil {
+		return err
+	}
 
-	data, err := d.DecryptLinkData(ctx, l.GetData(), md.Recipients)
+	data, err := d.DecryptLinkData(ctx, encData, md.Recipients)
 	if err != nil {
 		return err
 	}

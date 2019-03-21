@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	chainscript "github.com/stratumn/go-chainscript"
 	"github.com/stratumn/go-connector/services/decryption"
 )
 
@@ -25,6 +26,7 @@ func (c *client) CallTraceGql(ctx context.Context, query string, variables map[s
 }
 
 type encryptedLink struct {
+	Raw  *chainscript.Link
 	Data []byte
 	Meta struct {
 		Recipients []*decryption.Recipient
@@ -92,27 +94,49 @@ func (c *client) parseAndDecryptLink(ctx context.Context, v reflect.Value) {
 		// This is not a decryptable link.
 		return
 	}
+
 	err = json.Unmarshal(lb, &link)
-	if err != nil || link.Data == nil || len(link.Meta.Recipients) == 0 {
+	if err != nil {
 		// This is not a decryptable link.
 		return
 	}
 
-	d, err := c.decryptor.DecryptLinkData(ctx, link.Data, link.Meta.Recipients)
-	if err != nil {
-		log.Error("could not decrypt link data: %s", err.Error())
+	if link.Raw != nil {
+
+		err := c.decryptor.DecryptLink(ctx, link.Raw)
+		if err != nil {
+			// This is not a decryptable link.
+			log.Error("could not decrypt link data: %s", err.Error())
+			return
+		}
+
+		// Set the decrypted raw link data.
+		if v.Kind() == reflect.Map {
+			v.SetMapIndex(reflect.ValueOf("raw"), reflect.ValueOf(link.Raw))
+		} else {
+			v.FieldByName("Raw").Set(reflect.ValueOf(link.Raw))
+		}
+
 	}
 
-	// Set the link data.
-	if v.Kind() == reflect.Map {
-		v.SetMapIndex(reflect.ValueOf("data"), reflect.ValueOf(d))
-		return
-	}
+	if link.Data != nil && len(link.Meta.Recipients) != 0 {
 
-	df := v.FieldByName("Data")
-	if df.Kind() == reflect.String {
-		df.SetString(string(d))
-	} else {
-		df.Set(reflect.ValueOf(d))
+		d, err := c.decryptor.DecryptLinkData(ctx, link.Data, link.Meta.Recipients)
+		if err != nil {
+			log.Error("could not decrypt link data: %s", err.Error())
+			return
+		}
+
+		// Set the link data.
+		if v.Kind() == reflect.Map {
+			v.SetMapIndex(reflect.ValueOf("data"), reflect.ValueOf(d))
+		} else {
+			df := v.FieldByName("Data")
+			if df.Kind() == reflect.String {
+				df.SetString(string(d))
+			} else {
+				df.Set(reflect.ValueOf(d))
+			}
+		}
 	}
 }

@@ -17,6 +17,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/golang/mock/gomock"
+	chainscript "github.com/stratumn/go-chainscript"
 	"github.com/stratumn/go-crypto/keys"
 	"github.com/stratumn/go-crypto/signatures"
 	"github.com/stretchr/testify/assert"
@@ -269,6 +270,143 @@ func TestClientService_LinkDecryption(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, linkData, l["data"])
 	})
+}
+
+func TestClientService_RawLinkDecryption(t *testing.T) {
+	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+		ExpiresAt: time.Now().Unix() + 1000,
+		IssuedAt:  time.Now().Unix() - 1000,
+	}).SignedString([]byte("plap"))
+
+	linkData := []byte("https://bit.ly/1nab8Fa")
+	csLink, _ := chainscript.NewLinkBuilder("plap", "zou").Build()
+	link := map[string]interface{}{
+		"raw": csLink,
+	}
+
+	lb, _ := json.Marshal(link)
+	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
+	accountServer := createMockServer(t, token, 1, "")
+
+	defer traceServer.Close()
+	defer accountServer.Close()
+
+	config := client.Config{
+		TraceURL:          traceServer.URL,
+		AccountURL:        accountServer.URL,
+		SigningPrivateKey: key,
+		Decryption:        "decryption",
+	}
+
+	s := &client.Service{}
+	s.SetConfig(config)
+
+	ctrl := gomock.NewController(t)
+	mockDec := mockdecryptor.NewMockDecryptor(ctrl)
+
+	s.Plug(map[string]interface{}{"decryption": mockDec})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runningCh := make(chan struct{})
+
+	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+	<-runningCh
+
+	c := s.Expose().(client.StratumnClient)
+
+	t.Run("struct with raw interface{}", func(t *testing.T) {
+		var rsp struct {
+			Link struct {
+				Raw interface{}
+			}
+		}
+
+		mockDec.EXPECT().DecryptLink(ctx, csLink).Times(1).Do(func(ctx context.Context, l *chainscript.Link) error {
+			l.Data = linkData
+			return nil
+		})
+
+		err := c.CallTraceGql(ctx, q, v, &rsp)
+		assert.NoError(t, err)
+
+		// raw should be a decrypted CS link.
+		l, ok := rsp.Link.Raw.(*chainscript.Link)
+		require.True(t, ok)
+
+		assert.Equal(t, linkData, l.Data)
+	})
+
+	t.Run("struct with a raw cs.Link", func(t *testing.T) {
+		var rsp struct {
+			Link struct {
+				Raw *chainscript.Link
+			}
+		}
+
+		mockDec.EXPECT().DecryptLink(ctx, csLink).Times(1).Do(func(ctx context.Context, l *chainscript.Link) error {
+			l.Data = linkData
+			return nil
+		})
+
+		err := c.CallTraceGql(ctx, q, v, &rsp)
+		assert.NoError(t, err)
+
+		// raw should be decrypted.
+		assert.Equal(t, linkData, rsp.Link.Raw.Data)
+	})
+}
+
+// Check that if another field is called raw, nothing fails.
+func TestClientService_NonLinkRawField(t *testing.T) {
+	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+		ExpiresAt: time.Now().Unix() + 1000,
+		IssuedAt:  time.Now().Unix() - 1000,
+	}).SignedString([]byte("plap"))
+
+	traceServer := createMockServer(t, token, 0, `{"data": {"trace": { "raw": "plap"}}}`)
+	accountServer := createMockServer(t, token, 1, "")
+
+	defer traceServer.Close()
+	defer accountServer.Close()
+
+	config := client.Config{
+		TraceURL:          traceServer.URL,
+		AccountURL:        accountServer.URL,
+		SigningPrivateKey: key,
+		Decryption:        "decryption",
+	}
+
+	s := &client.Service{}
+	s.SetConfig(config)
+
+	ctrl := gomock.NewController(t)
+	mockDec := mockdecryptor.NewMockDecryptor(ctrl)
+
+	s.Plug(map[string]interface{}{"decryption": mockDec})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runningCh := make(chan struct{})
+
+	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+	<-runningCh
+
+	c := s.Expose().(client.StratumnClient)
+
+	var rsp struct {
+		Trace struct {
+			Raw interface{}
+		}
+	}
+
+	mockDec.EXPECT().DecryptLink(gomock.Any(), gomock.Any()).Times(0)
+
+	err := c.CallTraceGql(ctx, q, v, &rsp)
+	assert.NoError(t, err)
+	assert.Equal(t, "plap", rsp.Trace.Raw)
 }
 
 func TestClientService_LinkListDecryption(t *testing.T) {
