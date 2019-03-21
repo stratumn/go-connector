@@ -7,6 +7,7 @@ package mocksynchronizer
 import (
 	gomock "github.com/golang/mock/gomock"
 	go_chainscript "github.com/stratumn/go-chainscript"
+	livesync "github.com/stratumn/go-connector/services/livesync"
 	reflect "reflect"
 )
 
@@ -34,13 +35,13 @@ func (m *MockSynchronizer) EXPECT() *MockSynchronizerMockRecorder {
 }
 
 // Register mocks base method
-func (m *MockSynchronizer) Register() <-chan []*go_chainscript.Link {
-	ret := m.ctrl.Call(m, "Register")
+func (m *MockSynchronizer) Register(arg0 livesync.WorkflowStates) <-chan []*go_chainscript.Link {
+	ret := m.ctrl.Call(m, "Register", arg0)
 	ret0, _ := ret[0].(<-chan []*go_chainscript.Link)
 	return ret0
 }
 
 // Register indicates an expected call of Register
-func (mr *MockSynchronizerMockRecorder) Register() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockSynchronizer)(nil).Register))
+func (mr *MockSynchronizerMockRecorder) Register(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockSynchronizer)(nil).Register), arg0)
 }

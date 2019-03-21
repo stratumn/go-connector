@@ -41,7 +41,7 @@ func TestParserService(t *testing.T) {
 
 		// parser must register to livesync updates
 		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register().Return(linksChan).Times(1)
+		synchronizer.EXPECT().Register(nil).Return(linksChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -71,7 +71,7 @@ func TestParserService(t *testing.T) {
 
 		// parser must register to livesync updates
 		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register().Return(linksChan).Times(1)
+		synchronizer.EXPECT().Register(nil).Return(linksChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -96,7 +96,7 @@ func TestParserService(t *testing.T) {
 
 		// parser must register to livesync updates
 		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register().Return(linksChan).Times(1)
+		synchronizer.EXPECT().Register(nil).Return(linksChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
