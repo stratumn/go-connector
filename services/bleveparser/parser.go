@@ -39,7 +39,7 @@ func indexLink(ctx context.Context, b *bleve.Batch, l *cs.Link) error {
 	var data interface{}
 	err := l.StructurizeData(&data)
 	if err != nil {
-		return err
+		// Use the empty data struct{}
 	}
 
 	// Marshal raw link into bytes.
