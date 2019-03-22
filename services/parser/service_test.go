@@ -58,7 +58,8 @@ func TestParserService(t *testing.T) {
 		newLink, _ := cs.NewLinkBuilder("p", "map").Build()
 		lh, _ := newLink.Hash()
 		lBytes, _ := json.Marshal(newLink)
-		memorystore.EXPECT().Put([]byte(lh), lBytes).Do(func(k, v []byte) { cancel() }).Times(1)
+		key := append(parser.LinkPrefix, []byte(lh)...)
+		memorystore.EXPECT().Put(key, lBytes).Do(func(k, v []byte) { cancel() }).Times(1)
 		linksChan <- []*cs.Link{newLink}
 
 		<-stoppingCh
@@ -113,7 +114,8 @@ func TestParserService(t *testing.T) {
 		newLink, _ := cs.NewLinkBuilder("p", "map").Build()
 		lh, _ := newLink.Hash()
 		lBytes, _ := json.Marshal(newLink)
-		memorystore.EXPECT().Put([]byte(lh), lBytes).Return(errors.New("Put failed")).Times(1)
+		key := append(parser.LinkPrefix, []byte(lh)...)
+		memorystore.EXPECT().Put(key, lBytes).Return(errors.New("Put failed")).Times(1)
 		linksChan <- []*cs.Link{newLink}
 
 		<-stoppingCh

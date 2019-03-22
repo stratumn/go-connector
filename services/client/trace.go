@@ -106,7 +106,6 @@ func (c *client) parseAndDecryptLink(ctx context.Context, v reflect.Value) {
 		err := c.decryptor.DecryptLink(ctx, link.Raw)
 		if err != nil {
 			// This is not a decryptable link.
-			log.Error("could not decrypt link data: %s", err.Error())
 			return
 		}
 
@@ -123,7 +122,7 @@ func (c *client) parseAndDecryptLink(ctx context.Context, v reflect.Value) {
 
 		d, err := c.decryptor.DecryptLinkData(ctx, link.Data, link.Meta.Recipients)
 		if err != nil {
-			log.Error("could not decrypt link data: %s", err.Error())
+			// This is not a decryptable link.
 			return
 		}
 
