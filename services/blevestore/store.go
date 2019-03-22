@@ -19,7 +19,7 @@ func newStore(path string) (*store, error) {
 	if path == "" {
 		// If no path provided, use in-mem store.
 		idx, err = bleve.NewMemOnly(buildMpping())
-	} else if _, err := os.Stat(path); os.IsNotExist(err) {
+	} else if _, e := os.Stat(path); os.IsNotExist(e) {
 		// If the path does not exist, create the index.
 		idx, err = bleve.New(path, buildMpping())
 	} else {
