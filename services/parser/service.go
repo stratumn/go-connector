@@ -41,7 +41,7 @@ func (s *Service) ID() string {
 
 // Name returns the human friendly name of the service.
 func (s *Service) Name() string {
-	return "Generic Chainscript Parser"
+	return "Generic CS Parser"
 }
 
 // Desc returns a description of what the service does.

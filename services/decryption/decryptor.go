@@ -95,7 +95,8 @@ func (d *decryptor) DecryptLink(ctx context.Context, l *cs.Link) error {
 	var encData []byte
 	err = json.Unmarshal(l.GetData(), &encData)
 	if err != nil {
-		return err
+		// The data is not a byte array => it is already decrypted.
+		return nil
 	}
 
 	data, err := d.DecryptLinkData(ctx, encData, md.Recipients)

@@ -3,9 +3,12 @@ package decryption
 import (
 	"context"
 
+	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"
 )
+
+var log = logging.Logger("decryption")
 
 // Service is the Ping service.
 type Service struct {

@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/stratumn/go-node/core/db"
 
 	cs "github.com/stratumn/go-chainscript"
+	"github.com/stratumn/go-node/core/db"
 
 	"github.com/stratumn/go-connector/services/livesync"
 )
@@ -15,6 +15,9 @@ import (
 var (
 	// ErrSyncStopped is returned when the subscription channel is closed by the synchronizer service.
 	ErrSyncStopped = errors.New("synchronizer service stopped")
+
+	// LinkPrefix is used to prefix keys in the store.
+	LinkPrefix = []byte("link")
 )
 
 type parser struct {
@@ -24,7 +27,7 @@ type parser struct {
 
 // saveLinks stores the links in the key/value store.
 // links are indexed by linkHash and are serialized to JSON.
-func (p *parser) saveLinks(links []*cs.Link) error {
+func (p *parser) saveLinks(ctx context.Context, links []*cs.Link) error {
 	for _, link := range links {
 
 		lh, err := link.Hash()
@@ -36,7 +39,8 @@ func (p *parser) saveLinks(links []*cs.Link) error {
 		if err != nil {
 			return err
 		}
-		err = p.db.Put(lh, linkBytes)
+		err = p.db.Put(append(LinkPrefix, lh...), linkBytes)
+
 		if err != nil {
 			return err
 		}
@@ -57,13 +61,13 @@ func (p *parser) run(ctx context.Context) error {
 				return ErrSyncStopped
 			}
 			if links != nil {
-				err := p.saveLinks(links)
+				err := p.saveLinks(ctx, links)
 				if err != nil {
 					return err
 				}
 			}
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
 		}
 	}
 }
