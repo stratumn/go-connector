@@ -37,10 +37,7 @@ func (p *parser) saveLinks(ctx context.Context, links []*cs.Link) error {
 func indexLink(ctx context.Context, b *bleve.Batch, l *cs.Link) error {
 	// Unmarshal link data.
 	var data interface{}
-	err := l.StructurizeData(&data)
-	if err != nil {
-		// Use the empty data struct{}
-	}
+	_ = l.StructurizeData(&data)
 
 	// Marshal raw link into bytes.
 	lb, err := json.Marshal(l)
@@ -50,10 +47,7 @@ func indexLink(ctx context.Context, b *bleve.Batch, l *cs.Link) error {
 
 	// Unmarshal metadata.
 	var md map[string]interface{}
-	err = json.Unmarshal(l.Meta.Data, &md)
-	if err != nil {
-		return err
-	}
+	_ = json.Unmarshal(l.Meta.Data, &md)
 
 	// Use link hash as document key.
 	lh, err := l.Hash()
