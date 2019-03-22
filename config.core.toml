@@ -1,5 +1,23 @@
 # Stratumn Node configuration file. Keep private!!!
 
+# Settings for the bleveparser module.
+[bleveparser]
+
+  # The version of the service configuration.
+  configuration_version = 1
+
+  # The name of the store service.
+  store = "blevestore"
+
+# Settings for the blevestore module.
+[blevestore]
+
+  # The version of the service configuration.
+  configuration_version = 1
+
+  # The path to the bleve store data.
+  path = "bleve_store"
+
 # Settings for the core module.
 [core]
 

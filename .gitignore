@@ -24,3 +24,6 @@ go-connector
 # Alice related files
 config.core.20*.toml
 log.jsonld
+
+# bleve store default folder
+bleve_store
