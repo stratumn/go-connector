@@ -23,7 +23,7 @@ type parser struct {
 
 // saveLinks stores the links in the bleve store.
 // links are indexed by linkHash, data and metadata are deserialized.
-// raw contains the non-iondexed raw link used to recreate the full link.
+// raw contains the non-indexed raw link used to recreate the full link.
 func (p *parser) saveLinks(ctx context.Context, links []*cs.Link) error {
 	b := p.idx.NewBatch()
 	for _, l := range links {
