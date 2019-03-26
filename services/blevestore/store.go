@@ -18,10 +18,10 @@ func newStore(path string) (*store, error) {
 	var err error
 	if path == "" {
 		// If no path provided, use in-mem store.
-		idx, err = bleve.NewMemOnly(buildMpping())
+		idx, err = bleve.NewMemOnly(buildMapping())
 	} else if _, e := os.Stat(path); os.IsNotExist(e) {
 		// If the path does not exist, create the index.
-		idx, err = bleve.New(path, buildMpping())
+		idx, err = bleve.New(path, buildMapping())
 	} else {
 		// If the path exists, use the existing data.
 		idx, err = bleve.Open(path)
@@ -33,7 +33,14 @@ func newStore(path string) (*store, error) {
 	return &store{idx}, nil
 }
 
-func buildMpping() *mapping.IndexMappingImpl {
+// buildMapping creates the document mapping for the bleve index.
+// The mapping defines one root object with 4 fields:
+//  - raw: non-indexed, contains the raw link in string.
+//  - data: indexed and saved, dynamic mapping, contains unmarshaled link.data.
+//  - meta: indexed and not saved, static mapping, contains link.meta and
+// 					the unmarshaled link.meta.process
+//  - metadata: index and not saved, static mapping, contains unmashaled link.meta.data.
+func buildMapping() *mapping.IndexMappingImpl {
 	root := bleve.NewDocumentMapping()
 
 	textFieldNotIndexed := bleve.NewTextFieldMapping()

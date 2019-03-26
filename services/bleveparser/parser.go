@@ -21,8 +21,9 @@ type parser struct {
 	synchronizer livesync.Synchronizer
 }
 
-// saveLinks stores the links in the key/value store.
-// links are indexed by linkHash and are serialized to JSON.
+// saveLinks stores the links in the bleve store.
+// links are indexed by linkHash, data and metadata are deserialized.
+// raw contains the non-iondexed raw link used to recreate the full link.
 func (p *parser) saveLinks(ctx context.Context, links []*cs.Link) error {
 	b := p.idx.NewBatch()
 	for _, l := range links {
