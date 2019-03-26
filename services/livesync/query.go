@@ -3,6 +3,7 @@ package livesync
 import (
 	"encoding/hex"
 
+	"github.com/pkg/errors"
 	cs "github.com/stratumn/go-chainscript"
 )
 
@@ -53,13 +54,16 @@ type linkEdges []struct {
 }
 
 // Segments returns the list of Segments from the linkEdges object
-func (edges linkEdges) Segments() []*cs.Segment {
+func (edges linkEdges) Segments() ([]*cs.Segment, error) {
 	segments := make([]*cs.Segment, len(edges))
 	for i, link := range edges {
-		lh, _ := hex.DecodeString(link.Node.LinkHash)
+		lh, err := hex.DecodeString(link.Node.LinkHash)
+		if err != nil {
+			return nil, errors.Wrap(err, "bad linkHash")
+		}
 		segments[i] = &cs.Segment{Link: link.Node.Raw, Meta: &cs.SegmentMeta{LinkHash: lh}}
 	}
-	return segments
+	return segments, nil
 }
 
 // Slice returns the list of link for which the cursor is positioned after the provided one.

@@ -92,12 +92,13 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 
 			err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
 			if err != nil {
-				log.Errorf("API returned error %s, shutting down..", err)
-				s.closeListeners()
-				return err
+				log.Errorf("API returned error %s, keeping running...", err)
 			}
 
-			segments := rsp.WorkflowByRowID.Links.Edges.Segments()
+			segments, err := rsp.WorkflowByRowID.Links.Edges.Segments()
+			if err != nil {
+				return err
+			}
 			if len(segments) > 0 {
 				fmt.Printf("Synced %d links\n", len(segments))
 				s.workflowStates[id] = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
