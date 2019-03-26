@@ -24,10 +24,10 @@ type parser struct {
 // saveLinks stores the links in the bleve store.
 // links are indexed by linkHash, data and metadata are deserialized.
 // raw contains the non-indexed raw link used to recreate the full link.
-func (p *parser) saveLinks(ctx context.Context, links []*cs.Link) error {
+func (p *parser) saveSegments(ctx context.Context, segments []*cs.Segment) error {
 	b := p.idx.NewBatch()
-	for _, l := range links {
-		if err := indexLink(ctx, b, l); err != nil {
+	for _, s := range segments {
+		if err := indexLink(ctx, b, s.Link); err != nil {
 			return err
 		}
 	}
@@ -82,16 +82,16 @@ func indexLink(ctx context.Context, b *bleve.Batch, l *cs.Link) error {
 // run subscribes to the livesync service and waits for updates.
 // It returns an error in case the channel is closed.
 func (p *parser) run(ctx context.Context) error {
-	linkChan := p.synchronizer.Register(nil)
+	segmentsChan := p.synchronizer.Register(nil)
 
 	for {
 		select {
-		case links, more := <-linkChan:
+		case segments, more := <-segmentsChan:
 			if !more {
 				return ErrSyncStopped
 			}
-			if links != nil {
-				err := p.saveLinks(ctx, links)
+			if segments != nil {
+				err := p.saveSegments(ctx, segments)
 				if err != nil {
 					return err
 				}

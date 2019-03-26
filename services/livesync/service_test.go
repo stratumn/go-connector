@@ -211,10 +211,10 @@ func TestLivesyncService(t *testing.T) {
 		cancel()
 		<-stoppingCh
 	})
-	t.Run("Returns an error when the API call failed", func(t *testing.T) {
+	t.Run("Keep running whent he API call failed", func(t *testing.T) {
 		apiError := errors.New("error")
 
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
 		client := mockclient.NewMockStratumnClient(ctrl)
 		config := livesync.Config{
 			PollInterval:     10,
@@ -228,12 +228,18 @@ func TestLivesyncService(t *testing.T) {
 
 		go func() {
 			err := s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
-			assert.EqualError(t, err, apiError.Error())
+			assert.EqualError(t, err, context.Canceled.Error())
 			stoppingCh <- struct{}{}
 		}()
 		<-runningCh
 
-		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(apiError)
+		gomock.InOrder(
+			client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError).Times(3),
+			client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
+				cancel()
+				return apiError
+			}).AnyTimes(),
+		)
 
 		<-stoppingCh
 	})
