@@ -7,6 +7,8 @@ package mockclient
 import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
+	go_chainscript "github.com/stratumn/go-chainscript"
+	client "github.com/stratumn/go-connector/services/client"
 	reflect "reflect"
 )
 
@@ -55,4 +57,17 @@ func (m *MockStratumnClient) CallTraceGql(arg0 context.Context, arg1 string, arg
 // CallTraceGql indicates an expected call of CallTraceGql
 func (mr *MockStratumnClientMockRecorder) CallTraceGql(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CallTraceGql", reflect.TypeOf((*MockStratumnClient)(nil).CallTraceGql), arg0, arg1, arg2, arg3)
+}
+
+// CreateLink mocks base method
+func (m *MockStratumnClient) CreateLink(arg0 context.Context, arg1 *go_chainscript.Link) (*client.CreateLinkPayload, error) {
+	ret := m.ctrl.Call(m, "CreateLink", arg0, arg1)
+	ret0, _ := ret[0].(*client.CreateLinkPayload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateLink indicates an expected call of CreateLink
+func (mr *MockStratumnClientMockRecorder) CreateLink(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLink", reflect.TypeOf((*MockStratumnClient)(nil).CreateLink), arg0, arg1)
 }

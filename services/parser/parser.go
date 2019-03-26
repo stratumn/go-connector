@@ -27,19 +27,14 @@ type parser struct {
 
 // saveLinks stores the links in the key/value store.
 // links are indexed by linkHash and are serialized to JSON.
-func (p *parser) saveLinks(ctx context.Context, links []*cs.Link) error {
-	for _, link := range links {
+func (p *parser) saveLinks(ctx context.Context, segments []*cs.Segment) error {
+	for _, segment := range segments {
 
-		lh, err := link.Hash()
+		linkBytes, err := json.Marshal(segment.Link)
 		if err != nil {
 			return err
 		}
-
-		linkBytes, err := json.Marshal(link)
-		if err != nil {
-			return err
-		}
-		err = p.db.Put(append(LinkPrefix, lh...), linkBytes)
+		err = p.db.Put(append(LinkPrefix, segment.Meta.LinkHash...), linkBytes)
 
 		if err != nil {
 			return err
