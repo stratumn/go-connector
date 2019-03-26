@@ -44,8 +44,8 @@ func TestParserService(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 
 		// parser must register to livesync updates
-		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register(gomock.Nil()).Return(linksChan).Times(1)
+		segmentsChan := make(chan []*cs.Segment)
+		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -62,6 +62,8 @@ func TestParserService(t *testing.T) {
 
 		l1, _ := cs.NewLinkBuilder("p", "map1").Build()
 		l2, _ := cs.NewLinkBuilder("p", "map2").Build()
+		s1, _ := l1.Segmentify()
+		s2, _ := l2.Segmentify()
 
 		// This is an ungly little hack, but there is no other way to have a valid batch...
 		i, _ := bleve.NewMemOnly(bleve.NewIndexMapping())
@@ -74,7 +76,7 @@ func TestParserService(t *testing.T) {
 			cancel()
 		}).Times(1)
 
-		linksChan <- []*cs.Link{l1, l2}
+		segmentsChan <- []*cs.Segment{s1, s2}
 
 		<-stoppingCh
 	})
@@ -85,8 +87,8 @@ func TestParserService(t *testing.T) {
 		defer cancel()
 
 		// parser must register to livesync updates
-		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register(gomock.Nil()).Return(linksChan).Times(1)
+		segmentsChan := make(chan []*cs.Segment)
+		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -99,7 +101,7 @@ func TestParserService(t *testing.T) {
 		<-runningCh
 
 		// closing the link channel should trigger an error and stop the service
-		close(linksChan)
+		close(segmentsChan)
 
 		<-stoppingCh
 	})
@@ -110,8 +112,8 @@ func TestParserService(t *testing.T) {
 		defer cancel()
 
 		// parser must register to livesync updates
-		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register(gomock.Nil()).Return(linksChan).Times(1)
+		segmentsChan := make(chan []*cs.Segment)
+		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -126,6 +128,7 @@ func TestParserService(t *testing.T) {
 		// send a new link through the channel and
 		// ensure that it triggers an error
 		l, _ := cs.NewLinkBuilder("p", "map").Build()
+		s, _ := l.Segmentify()
 
 		// This is an ungly little hack, but there is no other way to have a valid batch...
 		i, _ := bleve.NewMemOnly(bleve.NewIndexMapping())
@@ -133,7 +136,7 @@ func TestParserService(t *testing.T) {
 
 		mockStore.EXPECT().NewBatch().Return(b).Times(1)
 		mockStore.EXPECT().Batch(b).Return(errors.New("wololololo")).Times(1)
-		linksChan <- []*cs.Link{l}
+		segmentsChan <- []*cs.Segment{s}
 
 		<-stoppingCh
 	})
