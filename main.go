@@ -7,6 +7,8 @@ import (
 	ossignal "os/signal"
 	"syscall"
 
+	"github.com/stratumn/go-connector/services/bleveparser"
+	"github.com/stratumn/go-connector/services/blevestore"
 	"github.com/stratumn/go-connector/services/client"
 	"github.com/stratumn/go-connector/services/decryption"
 	"github.com/stratumn/go-connector/services/livesync"
@@ -41,31 +43,12 @@ var (
 		&memorystore.Service{},
 		&parser.Service{},
 		&livesync.Service{},
+		&blevestore.Service{},
+		&bleveparser.Service{},
 	}
 
 	Config = core.Config{
-		BootService: "boot",
-		ServiceGroups: []core.ServiceGroupConfig{{
-			ID:       "boot",
-			Name:     "Boot Services",
-			Desc:     "Starts boot services.",
-			Services: []string{"system", "api", "util"},
-		}, {
-			ID:       "system",
-			Name:     "System Services",
-			Desc:     "Starts system services.",
-			Services: []string{"signal", "pruner", "monitoring"},
-		}, {
-			ID:       "api",
-			Name:     "API Services",
-			Desc:     "Starts API services.",
-			Services: []string{"grpcapi", "grpcweb"},
-		}, {
-			ID:       "util",
-			Name:     "Utility Services",
-			Desc:     "Starts utility services.",
-			Services: []string{"event"},
-		}},
+		BootService:      "boot",
 		EnableBootScreen: false,
 	}
 )

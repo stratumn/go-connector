@@ -1,4 +1,4 @@
-package decryption
+package blevestore
 
 import (
 	"context"
@@ -7,35 +7,35 @@ import (
 	"github.com/stratumn/go-node/core/cfg"
 )
 
-// Service is the Ping service.
+// Service is the Blevestore service.
 type Service struct {
 	config *Config
 
-	decryptor Decryptor
+	store *store
 }
 
-// Config contains configuration options for the Ping service.
+// Config contains configuration options for the Blevestore service.
 type Config struct {
-	// SigningPrivateKey is pretty well named.
-	EncryptionPrivateKey string `toml:"encryption_private_key" comment:"The encryption private key."`
-
 	// ConfigVersion is the version of the configuration file.
 	ConfigVersion int `toml:"configuration_version" comment:"The version of the service configuration."`
+
+	// Path is the path to the bleve store data.
+	Path string `toml:"path" comment:"The path to the bleve store data."`
 }
 
 // ID returns the unique identifier of the service.
 func (s *Service) ID() string {
-	return "decryption"
+	return "blevestore"
 }
 
 // Name returns the human friendly name of the service.
 func (s *Service) Name() string {
-	return "Decryption"
+	return "Bleve Store"
 }
 
 // Desc returns a description of what the service does.
 func (s *Service) Desc() string {
-	return "Service used to decrypt links."
+	return "In-Memory Search index"
 }
 
 // Config returns the current service configuration or creates one with
@@ -65,20 +65,19 @@ func (s *Service) Plug(exposed map[string]interface{}) error {
 	return nil
 }
 
-// Expose exposes the stratumn client to other services.
-//
-// It exposes the decryptor instance
+// Expose exposes the database client to other services.
+// It exposes the database instance.
 func (s *Service) Expose() interface{} {
-	return s.decryptor
+	return s.store.idx
 }
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	d, err := newDecryptor([]byte(s.config.EncryptionPrivateKey))
+	var err error
+	s.store, err = newStore(s.config.Path)
 	if err != nil {
 		return err
 	}
-	s.decryptor = d
 
 	running()
 	<-ctx.Done()
@@ -98,7 +97,7 @@ func (s *Service) VersionKey() string {
 func (s *Service) Migrations() []cfg.MigrateHandler {
 	return []cfg.MigrateHandler{
 		func(tree *cfg.Tree) error {
-			return tree.Set("encryption_private_key", "")
+			return tree.Set("path", "bleve_store")
 		},
 	}
 }
