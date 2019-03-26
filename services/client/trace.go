@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	chainscript "github.com/stratumn/go-chainscript"
+
 	"github.com/stratumn/go-connector/services/decryption"
 )
 
@@ -13,6 +14,7 @@ import (
 type TraceClient interface {
 	// CallTraceGql makes a call to the Trace graphql endpoint.
 	CallTraceGql(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error
+	CreateLink(ctx context.Context, link *chainscript.Link) (*CreateLinkPayload, error)
 }
 
 func (c *client) CallTraceGql(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
@@ -138,4 +140,39 @@ func (c *client) parseAndDecryptLink(ctx context.Context, v reflect.Value) {
 			}
 		}
 	}
+}
+
+// CreateLinkPayload is the type returned by CreateLink.
+type CreateLinkPayload struct {
+	CreateLink struct {
+		Trace struct {
+			RowID string
+		}
+	}
+}
+
+// CreateLinkMutation is the mutation sent to create a link.
+const CreateLinkMutation = `mutation CreateLinkMutation ($link: JSON!) {
+	createLink(input: {link: $link}) {
+		trace {
+			rowId
+		}
+	}
+}`
+
+// CreateStatusRequestLink creates a status request attestation.
+// It signs the link before sending it.
+func (c *client) CreateLink(ctx context.Context, link *chainscript.Link) (*CreateLinkPayload, error) {
+	err := link.Sign(c.signingPrivateKey, "[version,data,meta]")
+	if err != nil {
+		return nil, err
+	}
+
+	variables := map[string]interface{}{"link": link}
+
+	var rsp CreateLinkPayload
+	if err := c.CallTraceGql(ctx, CreateLinkMutation, variables, &rsp); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
 }
