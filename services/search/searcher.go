@@ -24,6 +24,8 @@ func newSearcher(idx bleve.Index) Searcher {
 	}
 }
 
+// Search searches for all the links that contain a given
+// string in either their data or meta.
 func (s *searcher) Search(ctx context.Context, str string) ([]*cs.Link, error) {
 	res := []*cs.Link{}
 

@@ -24,7 +24,6 @@ require (
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/golang/mock v1.2.0
-	github.com/gorilla/mux v1.7.0
 	github.com/improbable-eng/grpc-web v0.9.1 // indirect
 	github.com/ipfs/go-log v0.0.1
 	github.com/jmhodges/levigo v1.0.0 // indirect
