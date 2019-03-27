@@ -14,6 +14,7 @@ import (
 	"github.com/stratumn/go-connector/services/livesync"
 	"github.com/stratumn/go-connector/services/memorystore"
 	"github.com/stratumn/go-connector/services/parser"
+	"github.com/stratumn/go-connector/services/search"
 
 	"github.com/pkg/errors"
 
@@ -45,6 +46,7 @@ var (
 		&livesync.Service{},
 		&blevestore.Service{},
 		&bleveparser.Service{},
+		&search.Service{},
 	}
 
 	Config = core.Config{
