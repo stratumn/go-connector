@@ -2,27 +2,28 @@ package livesync_test
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+	cs "github.com/stratumn/go-chainscript"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stratumn/go-connector/services/client/mockclient"
 	"github.com/stratumn/go-connector/services/livesync"
-
-	"github.com/stretchr/testify/assert"
 )
 
 const (
-	rspWithNextPage = `{"workflowByRowId":{"id":"WyJ3b3JrZmxvd3MiLDIxMV0=","name":"AXA CLP - MyData employment status","links":{"edges":[{"cursor":"cursor1","node":{"raw":{"data":"eyJBVVRIX0NPREUiOiJzb21lIGNvZGUiLCJDTElFTlRfSUQiOiJteSBkYXRhIGNsaWVudCBJRCIsIkNMSUVOVF9TRUNSRVQiOiJteSBkYXRhIGNsaWVudCBzZWNyZXQifQ==","meta":{"data":"eyJjcmVhdGVkQnlJZCI6IjEyNyIsImZvcm1JZCI6IjI5NDUiLCJncm91cElkIjoiNjQ4IiwiaW5wdXRzIjpudWxsLCJsYXN0Rm9ybUlkIjoiMjk0NCIsIm93bmVySWQiOiIxNjQifQ==","mapId":"ddf953b8-d1fb-4e0d-8416-320c823760d9","action":"Consent request","process":{"name":"211","state":"FREE"},"clientId":"github.com/stratumn/go-chainscript","priority":2,"outDegree":1,"prevLinkHash":"z4iiGAePyFOs9gzgI2ITGU6XVqh7kLRkmflTTqZi100="},"version":"1.0.0","signatures":[{"version":"1.0.0","publicKey":"LS0tLS1CRUdJTiBFRDI1NTE5IFBVQkxJQyBLRVktLS0tLQpNQ293QlFZREsyVndBeUVBNXdrYkdSMmR5cHp3Mm1ma0RXWi9xaCtSNW5DNlVDN0k5WmgxUU9BU1NsWT0KLS0tLS1FTkQgRUQyNTUxOSBQVUJMSUMgS0VZLS0tLS0K","signature":"LS0tLS1CRUdJTiBNRVNTQUdFLS0tLS0KamQxRVN2T0pNbnBoTGFqWHQ1cC9nbnJmbFoxVjE1M3haQUxYK01TSFBpTnA1WHEyenhkc2J4bnBpd2UxWVZHQgpIVCtwdEFkSkVEczhWVkFheWhXUERRPT0KLS0tLS1FTkQgTUVTU0FHRS0tLS0tCg==","payloadPath":"[version,data,meta]"}]}}},{"cursor":"cursor2","node":{"raw":{"data":"eyJVU0VSX0lEIjoiMjMifQ==","meta":{"data":"eyJjcmVhdGVkQnlJZCI6IjEyNyIsImZvcm1JZCI6IjI5NDQiLCJncm91cElkIjoiNjQ4IiwiaW5wdXRzIjpudWxsLCJvd25lcklkIjoiMTY0In0=","tags":["USER-ID-23"],"mapId":"ddf953b8-d1fb-4e0d-8416-320c823760d9","action":"Initialization","process":{"name":"211","state":"FREE"},"clientId":"github.com/stratumn/go-chainscript","priority":1,"outDegree":1},"version":"1.0.0","signatures":[{"version":"1.0.0","publicKey":"LS0tLS1CRUdJTiBFRDI1NTE5IFBVQkxJQyBLRVktLS0tLQpNQ293QlFZREsyVndBeUVBNXdrYkdSMmR5cHp3Mm1ma0RXWi9xaCtSNW5DNlVDN0k5WmgxUU9BU1NsWT0KLS0tLS1FTkQgRUQyNTUxOSBQVUJMSUMgS0VZLS0tLS0K","signature":"LS0tLS1CRUdJTiBNRVNTQUdFLS0tLS0KenpMRDhXNFNLOGNKTWxEdlpxdEVUVGxzWGIxM0VYd2QrT1ZpRERaVHlzYVZGbFdtRzc5KzIxSkFmU3pkdjFQagpGTGE3NU9OQWU4SjRMd0ZxMnJFTEFRPT0KLS0tLS1FTkQgTUVTU0FHRS0tLS0tCg==","payloadPath":"[version,data,meta]"}]}}}],"pageInfo":{"hasNextPage":true,"endCursor":"endCursor"}}}}`
+	rspWithNextPage = `{"workflowByRowId":{"id":"WyJ3b3JrZmxvd3MiLDIxMV0=","name":"AXA CLP - MyData employment status","links":{"edges":[{"cursor":"cursor1","node":{"linkHash":"deadbeefdeadbeef","raw":{"data":"eyJBVVRIX0NPREUiOiJzb21lIGNvZGUiLCJDTElFTlRfSUQiOiJteSBkYXRhIGNsaWVudCBJRCIsIkNMSUVOVF9TRUNSRVQiOiJteSBkYXRhIGNsaWVudCBzZWNyZXQifQ==","meta":{"data":"eyJjcmVhdGVkQnlJZCI6IjEyNyIsImZvcm1JZCI6IjI5NDUiLCJncm91cElkIjoiNjQ4IiwiaW5wdXRzIjpudWxsLCJsYXN0Rm9ybUlkIjoiMjk0NCIsIm93bmVySWQiOiIxNjQifQ==","mapId":"ddf953b8-d1fb-4e0d-8416-320c823760d9","action":"Consent request","process":{"name":"211","state":"FREE"},"clientId":"github.com/stratumn/go-chainscript","priority":2,"outDegree":1,"prevLinkHash":"z4iiGAePyFOs9gzgI2ITGU6XVqh7kLRkmflTTqZi100="},"version":"1.0.0","signatures":[{"version":"1.0.0","publicKey":"LS0tLS1CRUdJTiBFRDI1NTE5IFBVQkxJQyBLRVktLS0tLQpNQ293QlFZREsyVndBeUVBNXdrYkdSMmR5cHp3Mm1ma0RXWi9xaCtSNW5DNlVDN0k5WmgxUU9BU1NsWT0KLS0tLS1FTkQgRUQyNTUxOSBQVUJMSUMgS0VZLS0tLS0K","signature":"LS0tLS1CRUdJTiBNRVNTQUdFLS0tLS0KamQxRVN2T0pNbnBoTGFqWHQ1cC9nbnJmbFoxVjE1M3haQUxYK01TSFBpTnA1WHEyenhkc2J4bnBpd2UxWVZHQgpIVCtwdEFkSkVEczhWVkFheWhXUERRPT0KLS0tLS1FTkQgTUVTU0FHRS0tLS0tCg==","payloadPath":"[version,data,meta]"}]}}},{"cursor":"cursor2","node":{"raw":{"data":"eyJVU0VSX0lEIjoiMjMifQ==","meta":{"data":"eyJjcmVhdGVkQnlJZCI6IjEyNyIsImZvcm1JZCI6IjI5NDQiLCJncm91cElkIjoiNjQ4IiwiaW5wdXRzIjpudWxsLCJvd25lcklkIjoiMTY0In0=","tags":["USER-ID-23"],"mapId":"ddf953b8-d1fb-4e0d-8416-320c823760d9","action":"Initialization","process":{"name":"211","state":"FREE"},"clientId":"github.com/stratumn/go-chainscript","priority":1,"outDegree":1},"version":"1.0.0","signatures":[{"version":"1.0.0","publicKey":"LS0tLS1CRUdJTiBFRDI1NTE5IFBVQkxJQyBLRVktLS0tLQpNQ293QlFZREsyVndBeUVBNXdrYkdSMmR5cHp3Mm1ma0RXWi9xaCtSNW5DNlVDN0k5WmgxUU9BU1NsWT0KLS0tLS1FTkQgRUQyNTUxOSBQVUJMSUMgS0VZLS0tLS0K","signature":"LS0tLS1CRUdJTiBNRVNTQUdFLS0tLS0KenpMRDhXNFNLOGNKTWxEdlpxdEVUVGxzWGIxM0VYd2QrT1ZpRERaVHlzYVZGbFdtRzc5KzIxSkFmU3pkdjFQagpGTGE3NU9OQWU4SjRMd0ZxMnJFTEFRPT0KLS0tLS1FTkQgTUVTU0FHRS0tLS0tCg==","payloadPath":"[version,data,meta]"}]}}}],"pageInfo":{"hasNextPage":true,"endCursor":"endCursor"}}}}`
 	rspLastPage     = `{"workflowByRowId":{"id":"WyJ3b3JrZmxvd3MiLDIxMV0=","name":"AXA CLP - MyData employment status","links":{"edges":[{"cursor":"cursor3","node":{"raw":{"data":"eyJVU0VSX0lEIjoiMjMifQ==","meta":{"data":"eyJjcmVhdGVkQnlJZCI6IjEyNyIsImZvcm1JZCI6IjI5NDQiLCJncm91cElkIjoiNjQ4IiwiaW5wdXRzIjpudWxsLCJvd25lcklkIjoiMTY0In0=","tags":["USER-ID-23"],"mapId":"ddf953b8-d1fb-4e0d-8416-320c823760d9","action":"Initialization","process":{"name":"211","state":"FREE"},"clientId":"github.com/stratumn/go-chainscript","priority":1,"outDegree":1},"version":"1.0.0","signatures":[{"version":"1.0.0","publicKey":"LS0tLS1CRUdJTiBFRDI1NTE5IFBVQkxJQyBLRVktLS0tLQpNQ293QlFZREsyVndBeUVBNXdrYkdSMmR5cHp3Mm1ma0RXWi9xaCtSNW5DNlVDN0k5WmgxUU9BU1NsWT0KLS0tLS1FTkQgRUQyNTUxOSBQVUJMSUMgS0VZLS0tLS0K","signature":"LS0tLS1CRUdJTiBNRVNTQUdFLS0tLS0KenpMRDhXNFNLOGNKTWxEdlpxdEVUVGxzWGIxM0VYd2QrT1ZpRERaVHlzYVZGbFdtRzc5KzIxSkFmU3pkdjFQagpGTGE3NU9OQWU4SjRMd0ZxMnJFTEFRPT0KLS0tLS1FTkQgTUVTU0FHRS0tLS0tCg==","payloadPath":"[version,data,meta]"}]}}}],"pageInfo":{"hasNextPage":false,"endCursor":"endCursor"}}}}`
 	rspWithoutLinks = `{"workflowByRowId":{"id":"WyJ3b3JrZmxvd3MiLDIxMV0=","name":"AXA CLP - MyData employment status","links":{"edges":[],"pageInfo":{"hasNextPage":false,"endCursor":"endCursor"}}}}`
 )
 
 var (
-	watchedWorkflows = []uint{1, 2}
+	watchedWorkflows = []string{"1", "2"}
 )
 
 func TestLivesyncService(t *testing.T) {
@@ -76,12 +77,15 @@ func TestLivesyncService(t *testing.T) {
 		updates := synchronizer.Register(nil)
 
 		// wait for the first update
-		links := <-updates
-		assert.Len(t, links, 2)
+		segments := <-updates
+		assert.Len(t, segments, 2)
+		firstLinkHash, _ := hex.DecodeString("deadbeefdeadbeef")
+
+		assert.Equal(t, segments[0].LinkHash(), cs.LinkHash(firstLinkHash))
 
 		// wait for the second update
-		links = <-updates
-		assert.Len(t, links, 1)
+		segments = <-updates
+		assert.Len(t, segments, 1)
 
 		cancel()
 		<-stoppingCh
@@ -133,8 +137,8 @@ func TestLivesyncService(t *testing.T) {
 		updates := synchronizer.Register(livesync.WorkflowStates{watchedWorkflows[0]: ""})
 
 		// wait for the first update
-		links := <-updates
-		assert.Len(t, links, 1)
+		segments := <-updates
+		assert.Len(t, segments, 1)
 
 		select {
 		case <-updates:
@@ -193,9 +197,9 @@ func TestLivesyncService(t *testing.T) {
 		updates := synchronizer.Register(livesync.WorkflowStates{watchedWorkflows[0]: "cursor1"})
 
 		// wait for the first update
-		// it should only containe one link since we started at cursor1 (the only remaining cursor is cursor2)
-		links := <-updates
-		assert.Len(t, links, 1)
+		// it should only contain one segments since we started at cursor1 (the only remaining cursor is cursor2)
+		segments := <-updates
+		assert.Len(t, segments, 1)
 
 		select {
 		case <-updates:
@@ -207,10 +211,10 @@ func TestLivesyncService(t *testing.T) {
 		cancel()
 		<-stoppingCh
 	})
-	t.Run("Returns an error when the API call failed", func(t *testing.T) {
+	t.Run("Keep running whent he API call failed", func(t *testing.T) {
 		apiError := errors.New("error")
 
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
 		client := mockclient.NewMockStratumnClient(ctrl)
 		config := livesync.Config{
 			PollInterval:     10,
@@ -224,12 +228,18 @@ func TestLivesyncService(t *testing.T) {
 
 		go func() {
 			err := s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
-			assert.EqualError(t, err, apiError.Error())
+			assert.EqualError(t, err, context.Canceled.Error())
 			stoppingCh <- struct{}{}
 		}()
 		<-runningCh
 
-		client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(apiError)
+		gomock.InOrder(
+			client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(apiError).Times(3),
+			client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
+				cancel()
+				return apiError
+			}).AnyTimes(),
+		)
 
 		<-stoppingCh
 	})

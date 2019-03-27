@@ -1,10 +1,13 @@
 package livesync
 
 import (
+	"encoding/hex"
+
+	"github.com/pkg/errors"
 	cs "github.com/stratumn/go-chainscript"
 )
 
-// pollQuery is the query sent to fetch links from trace API.
+// pollQuery is the query sent to fetch segments from trace API.
 const pollQuery = `query workflowLinks(
 	$id: BigInt!
 	$cursor: Cursor
@@ -17,6 +20,7 @@ const pollQuery = `query workflowLinks(
 		edges {
 			cursor
 			node {
+				linkHash
 				raw
 			}
 		}
@@ -44,28 +48,39 @@ type rspData struct {
 type linkEdges []struct {
 	Cursor string
 	Node   struct {
-		Raw *cs.Link
+		Raw      *cs.Link
+		LinkHash string
 	}
 }
 
-// Links returns the list of Links in the linkEdges object
-func (edges linkEdges) Links() []*cs.Link {
-	links := make([]*cs.Link, len(edges))
+// Segments returns the list of Segments from the linkEdges object
+func (edges linkEdges) Segments() ([]*cs.Segment, error) {
+	segments := make([]*cs.Segment, len(edges))
 	for i, link := range edges {
-		links[i] = link.Node.Raw
+		lh, err := hex.DecodeString(link.Node.LinkHash)
+		if err != nil {
+			return nil, errors.Wrap(err, "bad linkHash")
+		}
+		segments[i] = &cs.Segment{Link: link.Node.Raw, Meta: &cs.SegmentMeta{LinkHash: lh}}
 	}
-	return links
+	return segments, nil
 }
 
 // Slice returns the list of link for which the cursor is positioned after the provided one.
 // It assumes the linkEdges are ordered by ascending cursor.
-func (edges linkEdges) Slice(cursor string) []*cs.Link {
-	links := make([]*cs.Link, 0, len(edges))
+func (edges linkEdges) Slice(cursor string) []*cs.Segment {
+	segments := make([]*cs.Segment, 0, len(edges))
 	for i := len(edges) - 1; i >= 0; i-- {
 		if edges[i].Cursor == cursor {
-			return links
+			return segments
 		}
-		links = append([]*cs.Link{edges[i].Node.Raw}, links...)
+		lh, _ := hex.DecodeString(edges[i].Node.LinkHash)
+		segments = append([]*cs.Segment{
+			&cs.Segment{
+				Link: edges[i].Node.Raw,
+				Meta: &cs.SegmentMeta{LinkHash: lh},
+			},
+		}, segments...)
 	}
-	return links
+	return segments
 }

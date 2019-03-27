@@ -2,12 +2,13 @@ package livesync
 
 import (
 	"context"
+	"fmt"
 	"strings"
-
-	"github.com/stratumn/go-connector/services/client"
 
 	logging "github.com/ipfs/go-log"
 	cs "github.com/stratumn/go-chainscript"
+
+	"github.com/stratumn/go-connector/services/client"
 )
 
 //go:generate mockgen -package mocksynchronizer -destination mocksynchronizer/mocksynchronizer.go github.com/stratumn/go-connector/services/livesync Synchronizer
@@ -19,7 +20,7 @@ var log = logging.Logger("livesync")
 
 // Synchronizer is the type exposed by the livesync service.
 type Synchronizer interface {
-	Register(WorkflowStates) <-chan []*cs.Link
+	Register(WorkflowStates) <-chan []*cs.Segment
 }
 
 type synchronizer struct {
@@ -32,20 +33,21 @@ type synchronizer struct {
 }
 
 // WorkflowStates maps the ID of the workflow to the cursor of the last synced link.
-type WorkflowStates map[uint]string
+type WorkflowStates map[string]string
 
 type listener struct {
 	states   WorkflowStates
-	listener chan<- []*cs.Link
+	listener chan<- []*cs.Segment
 }
 
 // NewSycnhronizer returns a new Synchronizer.
 // It takes a stratumn client and a list of workflows to sync with.
-func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) Synchronizer {
-	states := WorkflowStates{}
+func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []string) Synchronizer {
+	states := make(WorkflowStates, len(watchedWorkflows))
 	for _, wfID := range watchedWorkflows {
 		states[wfID] = ""
 	}
+
 	return &synchronizer{
 		client:         client,
 		workflowStates: states,
@@ -56,15 +58,15 @@ func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []uint) Sync
 // The listener may pass a WorkflowStates object to specify which workflows it
 // wants to receive updates from and from which cursor it should receive updates.
 // If nil is passed, the listener will be notified of updates for all synced workflows.
-func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Link {
+func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Segment {
 	if states == nil {
-		states = WorkflowStates{}
+		states = make(WorkflowStates, len(s.workflowStates))
 		for wfID := range s.workflowStates {
 			states[wfID] = ""
 		}
 	}
 
-	newCh := make(chan []*cs.Link)
+	newCh := make(chan []*cs.Segment)
 	s.registeredServices = append(s.registeredServices, &listener{
 		listener: newCh,
 		states:   states,
@@ -90,17 +92,22 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 
 			err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
 			if err != nil {
-				return err
+				log.Errorf("API returned error %s, keeping running...", err)
+				break
 			}
 
-			links := rsp.WorkflowByRowID.Links.Edges.Links()
-			if len(links) > 0 {
-				log.Infof("Synced %d links\n", len(links))
+			segments, err := rsp.WorkflowByRowID.Links.Edges.Segments()
+			if err != nil {
+				s.closeListeners()
+				return err
+			}
+			if len(segments) > 0 {
+				fmt.Printf("Synced %d links\n", len(segments))
 				s.workflowStates[id] = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
-				// send the synced links to the registered services.
+				// send the synced segments to the registered services.
 				// compare the current cursor to the cursor specified by each service:
 				// - if the current cursor is anterior or equal, do not send any updates.
-				// - else send all the links starting from the service's cursor.
+				// - else send all the segments starting from the service's cursor.
 				for _, service := range s.registeredServices {
 					// if the service does not subscribe to this workflow, skip it.
 					if _, ok := service.states[id]; !ok {
@@ -118,4 +125,10 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *synchronizer) closeListeners() {
+	for _, l := range s.registeredServices {
+		close(l.listener)
+	}
 }

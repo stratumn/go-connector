@@ -40,8 +40,8 @@ func TestParserService(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 
 		// parser must register to livesync updates
-		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register(nil).Return(linksChan).Times(1)
+		segmentsChan := make(chan []*cs.Segment)
+		synchronizer.EXPECT().Register(nil).Return(segmentsChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -56,11 +56,11 @@ func TestParserService(t *testing.T) {
 		// ensure the links are saved in store
 		// then cancel the context in order to stop the service
 		newLink, _ := cs.NewLinkBuilder("p", "map").Build()
-		lh, _ := newLink.Hash()
+		newSegment, _ := newLink.Segmentify()
 		lBytes, _ := json.Marshal(newLink)
-		key := append(parser.LinkPrefix, []byte(lh)...)
+		key := append(parser.LinkPrefix, newSegment.LinkHash()...)
 		memorystore.EXPECT().Put(key, lBytes).Do(func(k, v []byte) { cancel() }).Times(1)
-		linksChan <- []*cs.Link{newLink}
+		segmentsChan <- []*cs.Segment{newSegment}
 
 		<-stoppingCh
 	})
@@ -71,8 +71,8 @@ func TestParserService(t *testing.T) {
 		defer cancel()
 
 		// parser must register to livesync updates
-		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register(nil).Return(linksChan).Times(1)
+		segmentsChan := make(chan []*cs.Segment)
+		synchronizer.EXPECT().Register(nil).Return(segmentsChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -84,8 +84,8 @@ func TestParserService(t *testing.T) {
 		}()
 		<-runningCh
 
-		// closing the link channel should trigger an error and stop the service
-		close(linksChan)
+		// closing the segments channel should trigger an error and stop the service
+		close(segmentsChan)
 
 		<-stoppingCh
 	})
@@ -96,8 +96,8 @@ func TestParserService(t *testing.T) {
 		defer cancel()
 
 		// parser must register to livesync updates
-		linksChan := make(chan []*cs.Link)
-		synchronizer.EXPECT().Register(nil).Return(linksChan).Times(1)
+		segmentsChan := make(chan []*cs.Segment)
+		synchronizer.EXPECT().Register(nil).Return(segmentsChan).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -112,11 +112,11 @@ func TestParserService(t *testing.T) {
 		// send a new link through the channel and
 		// ensure that it triggers an error
 		newLink, _ := cs.NewLinkBuilder("p", "map").Build()
-		lh, _ := newLink.Hash()
+		newSegment, _ := newLink.Segmentify()
 		lBytes, _ := json.Marshal(newLink)
-		key := append(parser.LinkPrefix, []byte(lh)...)
+		key := append(parser.LinkPrefix, newSegment.LinkHash()...)
 		memorystore.EXPECT().Put(key, lBytes).Return(errors.New("Put failed")).Times(1)
-		linksChan <- []*cs.Link{newLink}
+		segmentsChan <- []*cs.Segment{newSegment}
 
 		<-stoppingCh
 	})

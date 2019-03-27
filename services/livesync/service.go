@@ -31,7 +31,7 @@ type Config struct {
 	ConfigVersion int `toml:"configuration_version" comment:"The version of the service configuration."`
 
 	PollInterval     time.Duration `toml:"poll_interval" comment:"The frenquency (in milliseconds) at which the livesync service polls data from Stratumn APIs."`
-	WatchedWorkflows []uint        `toml:"watched_workflows" comment:"The IDs of the workflows to synchronize data from."`
+	WatchedWorkflows []string      `toml:"watched_workflows" comment:"The IDs of the workflows to synchronize data from."`
 }
 
 // ID returns the unique identifier of the service.

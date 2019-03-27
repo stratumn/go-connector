@@ -41,41 +41,77 @@ func TestClientService_TraceClient(t *testing.T) {
 		IssuedAt:  time.Now().Unix() - 1000,
 	}).SignedString([]byte("plap"))
 
-	traceServer := createMockServer(t, token, 0, `{"data": {"value": "42"}}`)
-	accountServer := createMockServer(t, token, 1, "")
+	t.Run("CallTraceGql", func(t *testing.T) {
+		traceServer := createMockServer(t, token, 0, `{"data": {"value": "42"}}`)
+		accountServer := createMockServer(t, token, 1, "")
 
-	defer traceServer.Close()
-	defer accountServer.Close()
+		defer traceServer.Close()
+		defer accountServer.Close()
 
-	config := client.Config{
-		TraceURL:          traceServer.URL,
-		AccountURL:        accountServer.URL,
-		SigningPrivateKey: key,
-	}
+		config := client.Config{
+			TraceURL:          traceServer.URL,
+			AccountURL:        accountServer.URL,
+			SigningPrivateKey: key,
+		}
 
-	s := &client.Service{}
-	s.SetConfig(config)
+		s := &client.Service{}
+		s.SetConfig(config)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-	runningCh := make(chan struct{})
+		runningCh := make(chan struct{})
 
-	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
-	<-runningCh
+		go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+		<-runningCh
 
-	c := s.Expose().(client.StratumnClient)
-	var rsp testRsp
+		c := s.Expose().(client.StratumnClient)
+		var rsp testRsp
 
-	// The first call is supposed to log the user in.
-	err := c.CallTraceGql(ctx, q, v, &rsp)
+		// The first call is supposed to log the user in.
+		err := c.CallTraceGql(ctx, q, v, &rsp)
 
-	assert.NoError(t, err)
-	assert.Equal(t, "42", rsp.Value)
+		assert.NoError(t, err)
+		assert.Equal(t, "42", rsp.Value)
 
-	// We make a second call to check that login is not called twice.
-	err = c.CallTraceGql(ctx, q, v, &rsp)
-	assert.NoError(t, err)
+		// We make a second call to check that login is not called twice.
+		err = c.CallTraceGql(ctx, q, v, &rsp)
+		assert.NoError(t, err)
+	})
+
+	t.Run("CreateLink", func(t *testing.T) {
+		traceServer := createMockServer(t, token, 0, `{"data": {"createLink": {"trace":{"rowId":"42"}}}}`)
+		accountServer := createMockServer(t, token, 1, "")
+
+		defer traceServer.Close()
+		defer accountServer.Close()
+
+		config := client.Config{
+			TraceURL:          traceServer.URL,
+			AccountURL:        accountServer.URL,
+			SigningPrivateKey: key,
+		}
+
+		s := &client.Service{}
+		s.SetConfig(config)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		runningCh := make(chan struct{})
+
+		go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+		<-runningCh
+
+		c := s.Expose().(client.StratumnClient)
+
+		link, _ := chainscript.NewLinkBuilder("one", "two").Build()
+		rsp, err := c.CreateLink(ctx, link)
+
+		require.NoError(t, err)
+		assert.Equal(t, "42", rsp.CreateLink.Trace.RowID)
+	})
+
 }
 
 func TestClientService_AccountClient(t *testing.T) {
@@ -582,8 +618,16 @@ func createMockServer(t *testing.T, token string, maxLogin int, rsp string) *htt
 			err := json.NewDecoder(r.Body).Decode(&req)
 			require.NoError(t, err)
 
-			assert.Equal(t, q, req["query"])
-			assert.Equal(t, v, req["variables"])
+			if req["query"] == client.CreateLinkMutation {
+				// ensure the link has been signed
+				vars := req["variables"].(map[string]interface{})
+				link := vars["link"].(map[string]interface{})
+				signatures := link["signatures"].([]interface{})
+				assert.Len(t, signatures, 1)
+			} else {
+				assert.Equal(t, q, req["query"])
+				assert.Equal(t, v, req["variables"])
+			}
 
 			fmt.Fprintln(w, rsp)
 			return
