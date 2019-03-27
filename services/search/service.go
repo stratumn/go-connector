@@ -4,13 +4,9 @@ import (
 	"context"
 
 	"github.com/blevesearch/bleve"
-	logging "github.com/ipfs/go-log"
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"
 )
-
-// log is the logger for the protocol.
-var log = logging.Logger("search")
 
 var (
 	// ErrNotStore is returned when the connected service is not a store exposind a DB.
