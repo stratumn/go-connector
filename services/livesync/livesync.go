@@ -59,9 +59,12 @@ func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []string) Sy
 // The livesync automatically subscribe to the workflow if it is not already the case.
 // If nil is passed, the listener will be notified of updates for all synced workflows.
 func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Segment {
-	for w, cursor := range states {
-		if _, ok := s.workflowStates[w]; !ok {
-			s.workflowStates[w] = cursor
+	for w, serviceEndCursor := range states {
+		if livesyncEndCursor, ok := s.workflowStates[w]; !ok {
+			s.workflowStates[w] = serviceEndCursor
+		} else if ok && strings.Compare(serviceEndCursor, livesyncEndCursor) == -1 {
+			// if a service register for updates in the past, lower the current end cursor.
+			s.workflowStates[w] = serviceEndCursor
 		}
 	}
 
@@ -69,14 +72,6 @@ func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Segment {
 		states = make(WorkflowStates, len(s.workflowStates))
 		for wfID := range s.workflowStates {
 			states[wfID] = ""
-		}
-	}
-
-	// if a service register for updates in the past, lower the current end cursor.
-	for w, livesyncEndCursor := range s.workflowStates {
-		serviceEndCursor := states[w]
-		if strings.Compare(serviceEndCursor, livesyncEndCursor) == -1 {
-			s.workflowStates[w] = serviceEndCursor
 		}
 	}
 
