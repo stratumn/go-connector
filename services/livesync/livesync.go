@@ -2,7 +2,6 @@ package livesync
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	logging "github.com/ipfs/go-log"
@@ -57,12 +56,27 @@ func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []string) Sy
 // Register subscribes a listener to future updates.
 // The listener may pass a WorkflowStates object to specify which workflows it
 // wants to receive updates from and from which cursor it should receive updates.
+// The livesync automatically subscribe to the workflow if it is not already the case.
 // If nil is passed, the listener will be notified of updates for all synced workflows.
 func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Segment {
+	for w, cursor := range states {
+		if _, ok := s.workflowStates[w]; !ok {
+			s.workflowStates[w] = cursor
+		}
+	}
+
 	if states == nil {
 		states = make(WorkflowStates, len(s.workflowStates))
 		for wfID := range s.workflowStates {
 			states[wfID] = ""
+		}
+	}
+
+	// if a service register for updates in the past, lower the current end cursor.
+	for w, livesyncEndCursor := range s.workflowStates {
+		serviceEndCursor := states[w]
+		if strings.Compare(serviceEndCursor, livesyncEndCursor) == -1 {
+			s.workflowStates[w] = serviceEndCursor
 		}
 	}
 
@@ -102,7 +116,7 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 				return err
 			}
 			if len(segments) > 0 {
-				fmt.Printf("Synced %d links\n", len(segments))
+				log.Infof("Synced %d links\n", len(segments))
 				s.workflowStates[id] = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
 				// send the synced segments to the registered services.
 				// compare the current cursor to the cursor specified by each service:
@@ -118,8 +132,8 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 						break
 					default:
 						service.listener <- rsp.WorkflowByRowID.Links.Edges.Slice(service.states[id])
+						service.states[id] = s.workflowStates[id]
 					}
-
 				}
 			}
 		}

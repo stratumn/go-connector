@@ -110,6 +110,7 @@ RUN_LOOP:
 				return err
 			}
 		case <-ctx.Done():
+			s.synchronizer.closeListeners()
 			break RUN_LOOP
 		}
 	}
