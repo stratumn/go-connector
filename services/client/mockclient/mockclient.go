@@ -71,3 +71,16 @@ func (m *MockStratumnClient) CreateLink(arg0 context.Context, arg1 *go_chainscri
 func (mr *MockStratumnClientMockRecorder) CreateLink(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLink", reflect.TypeOf((*MockStratumnClient)(nil).CreateLink), arg0, arg1)
 }
+
+// GetRecipientsPublicKeys mocks base method
+func (m *MockStratumnClient) GetRecipientsPublicKeys(arg0 context.Context, arg1 string) ([]*client.PublicKeyInfo, error) {
+	ret := m.ctrl.Call(m, "GetRecipientsPublicKeys", arg0, arg1)
+	ret0, _ := ret[0].([]*client.PublicKeyInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRecipientsPublicKeys indicates an expected call of GetRecipientsPublicKeys
+func (mr *MockStratumnClientMockRecorder) GetRecipientsPublicKeys(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecipientsPublicKeys", reflect.TypeOf((*MockStratumnClient)(nil).GetRecipientsPublicKeys), arg0, arg1)
+}

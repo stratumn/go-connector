@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/pkg/errors"
 	chainscript "github.com/stratumn/go-chainscript"
 
 	"github.com/stratumn/go-connector/services/decryption"
@@ -15,6 +16,8 @@ type TraceClient interface {
 	// CallTraceGql makes a call to the Trace graphql endpoint.
 	CallTraceGql(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error
 	CreateLink(ctx context.Context, link *chainscript.Link) (*CreateLinkPayload, error)
+
+	GetRecipientsPublicKeys(ctx context.Context, workflowID string) ([]*PublicKeyInfo, error)
 }
 
 func (c *client) CallTraceGql(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
@@ -175,4 +178,64 @@ func (c *client) CreateLink(ctx context.Context, link *chainscript.Link) (*Creat
 		return nil, err
 	}
 	return &rsp, nil
+}
+
+// PublicKeyInfo contains the public key and its ID.
+type PublicKeyInfo struct {
+	ID        string
+	PublicKey []byte
+}
+
+// RecipientsKeysQuery is the query sent to fetch the public
+// keys of the workflow participants from trace API.
+const RecipientsKeysQuery = `query GetRecipientsKeysQuery($workflowId: BigInt!) {
+	workflowByRowId(rowId: $workflowId) {
+		groups {
+			nodes {
+				owner {
+					encryptionKey { rowId, publicKey }
+				}
+			}
+		}
+	}
+}`
+
+// RecipientsKeysRsp is the structure of the response of the
+// recipientsKeysQuery query.
+type RecipientsKeysRsp struct {
+	WorkflowByRowID *struct {
+		Groups struct {
+			Nodes []struct {
+				Owner struct {
+					EncryptionKey struct {
+						PublicKey string
+						RowID     string
+					}
+				}
+			}
+		}
+	}
+}
+
+// GetRecipientsPublicKeys gets the public keys of the workflow's group owners.
+// the keys are cached for `keyRefreshInterval` minutes.
+func (c *client) GetRecipientsPublicKeys(ctx context.Context, workflowID string) ([]*PublicKeyInfo, error) {
+
+	variables := map[string]interface{}{"workflowId": workflowID}
+
+	rsp := RecipientsKeysRsp{}
+	if err := c.CallTraceGql(ctx, RecipientsKeysQuery, variables, &rsp); err != nil {
+		return nil, err
+	}
+	if rsp.WorkflowByRowID == nil {
+		return nil, errors.Errorf("workflow %s not found", workflowID)
+	}
+
+	res := make([]*PublicKeyInfo, len(rsp.WorkflowByRowID.Groups.Nodes))
+	for i, g := range rsp.WorkflowByRowID.Groups.Nodes {
+		pk := []byte(g.Owner.EncryptionKey.PublicKey)
+		res[i] = &PublicKeyInfo{PublicKey: pk, ID: g.Owner.EncryptionKey.RowID}
+	}
+
+	return res, nil
 }

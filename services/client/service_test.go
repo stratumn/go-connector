@@ -30,7 +30,11 @@ const (
 )
 
 var (
-	v = map[string]interface{}{"life": "42"}
+	v        = map[string]interface{}{"life": "42"}
+	expected = map[string]interface{}{
+		"query":     q,
+		"variables": v,
+	}
 )
 
 type testRsp struct{ Value string }
@@ -42,8 +46,8 @@ func TestClientService_TraceClient(t *testing.T) {
 	}).SignedString([]byte("plap"))
 
 	t.Run("CallTraceGql", func(t *testing.T) {
-		traceServer := createMockServer(t, token, 0, `{"data": {"value": "42"}}`)
-		accountServer := createMockServer(t, token, 1, "")
+		traceServer := createMockServer(t, token, 0, expected, `{"data": {"value": "42"}}`)
+		accountServer := createMockServer(t, token, 1, nil, "")
 
 		defer traceServer.Close()
 		defer accountServer.Close()
@@ -80,8 +84,8 @@ func TestClientService_TraceClient(t *testing.T) {
 	})
 
 	t.Run("CreateLink", func(t *testing.T) {
-		traceServer := createMockServer(t, token, 0, `{"data": {"createLink": {"trace":{"rowId":"42"}}}}`)
-		accountServer := createMockServer(t, token, 1, "")
+		traceServer := createMockServer(t, token, 0, expected, `{"data": {"createLink": {"trace":{"rowId":"42"}}}}`)
+		accountServer := createMockServer(t, token, 1, nil, "")
 
 		defer traceServer.Close()
 		defer accountServer.Close()
@@ -120,7 +124,7 @@ func TestClientService_AccountClient(t *testing.T) {
 		IssuedAt:  time.Now().Unix() - 1000,
 	}).SignedString([]byte("plap"))
 
-	ts := createMockServer(t, token, 1, `{"data": {"value": "42"}}`)
+	ts := createMockServer(t, token, 1, expected, `{"data": {"value": "42"}}`)
 
 	defer ts.Close()
 
@@ -161,7 +165,7 @@ func TestClientService_TokenExpired(t *testing.T) {
 		IssuedAt:  time.Now().Unix() - 1000,
 	}).SignedString([]byte("plap"))
 
-	ts := createMockServer(t, token, 2, `{"data": {"value": "42"}}`)
+	ts := createMockServer(t, token, 2, expected, `{"data": {"value": "42"}}`)
 
 	defer ts.Close()
 
@@ -211,8 +215,8 @@ func TestClientService_LinkDecryption(t *testing.T) {
 	}
 
 	lb, _ := json.Marshal(link)
-	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
-	accountServer := createMockServer(t, token, 1, "")
+	traceServer := createMockServer(t, token, 0, expected, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
+	accountServer := createMockServer(t, token, 1, nil, "")
 
 	defer traceServer.Close()
 	defer accountServer.Close()
@@ -321,8 +325,8 @@ func TestClientService_RawLinkDecryption(t *testing.T) {
 	}
 
 	lb, _ := json.Marshal(link)
-	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
-	accountServer := createMockServer(t, token, 1, "")
+	traceServer := createMockServer(t, token, 0, expected, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
+	accountServer := createMockServer(t, token, 1, nil, "")
 
 	defer traceServer.Close()
 	defer accountServer.Close()
@@ -401,8 +405,8 @@ func TestClientService_NonLinkRawField(t *testing.T) {
 		IssuedAt:  time.Now().Unix() - 1000,
 	}).SignedString([]byte("plap"))
 
-	traceServer := createMockServer(t, token, 0, `{"data": {"trace": { "raw": "plap"}}}`)
-	accountServer := createMockServer(t, token, 1, "")
+	traceServer := createMockServer(t, token, 0, expected, `{"data": {"trace": { "raw": "plap"}}}`)
+	accountServer := createMockServer(t, token, 1, nil, "")
 
 	defer traceServer.Close()
 	defer accountServer.Close()
@@ -468,8 +472,8 @@ func TestClientService_LinkListDecryption(t *testing.T) {
 
 	lb1, _ := json.Marshal(link1)
 	lb2, _ := json.Marshal(link2)
-	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"links": [%s, %s]}}`, string(lb1), string(lb2)))
-	accountServer := createMockServer(t, token, 1, "")
+	traceServer := createMockServer(t, token, 0, expected, fmt.Sprintf(`{"data": {"links": [%s, %s]}}`, string(lb1), string(lb2)))
+	accountServer := createMockServer(t, token, 1, nil, "")
 
 	defer traceServer.Close()
 	defer accountServer.Close()
@@ -531,8 +535,8 @@ func TestClientService_NoLinkDecryption(t *testing.T) {
 	}
 
 	lb, _ := json.Marshal(link)
-	traceServer := createMockServer(t, token, 0, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
-	accountServer := createMockServer(t, token, 1, "")
+	traceServer := createMockServer(t, token, 0, expected, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
+	accountServer := createMockServer(t, token, 1, nil, "")
 
 	defer traceServer.Close()
 	defer accountServer.Close()
@@ -577,12 +581,59 @@ func TestClientService_NoLinkDecryption(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, encLinkData, rsp.Link.Data)
 }
+func TestClientService_GetRecipientsPublicKeys(t *testing.T) {
+	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+		ExpiresAt: time.Now().Unix() + 1000,
+		IssuedAt:  time.Now().Unix() - 1000,
+	}).SignedString([]byte("plap"))
+
+	expected := map[string]interface{}{
+		"variables": map[string]interface{}{
+			"workflowId": "3",
+		},
+		"query": client.RecipientsKeysQuery,
+	}
+	traceServer := createMockServer(t, token, 0, expected, `{"data":{"workflowByRowId":{"groups":{"nodes":[{"owner":{"encryptionKey":{"rowId":"1","publicKey":"-----BEGIN RSA PUBLIC KEY-----\ntoto\n-----END RSA PUBLIC KEY-----\n"}}},{"owner":{"encryptionKey":{"rowId":"2","publicKey":"-----BEGIN RSA PUBLIC KEY-----\ntata\n-----END RSA PUBLIC KEY-----\n"}}}]}}}}`)
+	accountServer := createMockServer(t, token, 1, nil, "")
+
+	defer traceServer.Close()
+	defer accountServer.Close()
+
+	config := client.Config{
+		TraceURL:          traceServer.URL,
+		AccountURL:        accountServer.URL,
+		SigningPrivateKey: key,
+		Decryption:        "decryption",
+	}
+
+	s := &client.Service{}
+	s.SetConfig(config)
+
+	ctrl := gomock.NewController(t)
+	mockDec := mockdecryptor.NewMockDecryptor(ctrl)
+
+	s.Plug(map[string]interface{}{"decryption": mockDec})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runningCh := make(chan struct{})
+
+	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+	<-runningCh
+
+	c := s.Expose().(client.StratumnClient)
+
+	publicKeys, err := c.GetRecipientsPublicKeys(ctx, "3")
+	assert.NoError(t, err)
+	assert.Len(t, publicKeys, 2)
+}
 
 // ============================================================================
 // 																	Helpers
 // ============================================================================
 
-func createMockServer(t *testing.T, token string, maxLogin int, rsp string) *httptest.Server {
+func createMockServer(t *testing.T, token string, maxLogin int, expected map[string]interface{}, rsp string) *httptest.Server {
 
 	cntLogin := 0
 
@@ -625,8 +676,8 @@ func createMockServer(t *testing.T, token string, maxLogin int, rsp string) *htt
 				signatures := link["signatures"].([]interface{})
 				assert.Len(t, signatures, 1)
 			} else {
-				assert.Equal(t, q, req["query"])
-				assert.Equal(t, v, req["variables"])
+				assert.Equal(t, expected["query"], req["query"])
+				assert.Equal(t, expected["variables"], req["variables"])
 			}
 
 			fmt.Fprintln(w, rsp)
