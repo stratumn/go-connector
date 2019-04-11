@@ -8,6 +8,23 @@ import (
 	"github.com/pkg/errors"
 )
 
+func parseCursor(cursor string) (float64, error) {
+	c, err := base64.StdEncoding.DecodeString(cursor)
+	if err != nil {
+		return 0, errors.Wrapf(err, "%s: bad cursor", cursor)
+	}
+	var cursorSlice []interface{}
+	err = json.Unmarshal(c, &cursorSlice)
+	if err != nil || len(cursorSlice) != 2 {
+		return 0, errors.Errorf("%s: cursor is not an array", string(c))
+	}
+	index, ok := cursorSlice[1].(float64)
+	if !ok {
+		return 0, errors.Errorf("%s: cursor does not have an index", string(c))
+	}
+	return index, nil
+}
+
 // CompareCursors returns the difference between relay cursors.
 // Relay cursors are base64 encoded strings that look like this: ["natural",109].
 // The second element of the slice is the incrementing index, this is what we want to compare.
@@ -16,32 +33,14 @@ func CompareCursors(cursor1, cursor2 string) (int, error) {
 		return strings.Compare(cursor1, cursor2), nil
 	}
 
-	c1, err := base64.StdEncoding.DecodeString(cursor1)
+	index1, err := parseCursor(cursor1)
 	if err != nil {
-		return 0, errors.Wrapf(err, "%s: bad cursor", cursor1)
+		return 0, err
 	}
-	c2, err := base64.StdEncoding.DecodeString(cursor2)
+	index2, err := parseCursor(cursor2)
 	if err != nil {
-		return 0, errors.Wrapf(err, "%s: bad cursor", cursor2)
+		return 0, err
 	}
 
-	var cursorSlice []interface{}
-	err = json.Unmarshal(c1, &cursorSlice)
-	if err != nil || len(cursorSlice) != 2 {
-		return 0, errors.Errorf("%s: cursor is not an array", string(c1))
-	}
-	id1, ok := cursorSlice[1].(float64)
-	if !ok {
-		return 0, errors.Errorf("%s: cursor does not have an index", string(c1))
-	}
-	err = json.Unmarshal(c2, &cursorSlice)
-	if err != nil || len(cursorSlice) != 2 {
-		return 0, errors.Errorf("%s: cursor is not an array", string(c2))
-	}
-	id2, ok := cursorSlice[1].(float64)
-	if !ok {
-		return 0, errors.Errorf("%s: cursor does not have an index", string(c2))
-	}
-
-	return int(id1 - id2), nil
+	return int(index1 - index2), nil
 }
