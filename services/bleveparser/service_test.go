@@ -45,7 +45,7 @@ func TestParserService(t *testing.T) {
 
 		// parser must register to livesync updates
 		segmentsChan := make(chan []*cs.Segment)
-		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan).Times(1)
+		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan, nil).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -88,7 +88,7 @@ func TestParserService(t *testing.T) {
 
 		// parser must register to livesync updates
 		segmentsChan := make(chan []*cs.Segment)
-		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan).Times(1)
+		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan, nil).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})
@@ -113,7 +113,7 @@ func TestParserService(t *testing.T) {
 
 		// parser must register to livesync updates
 		segmentsChan := make(chan []*cs.Segment)
-		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan).Times(1)
+		synchronizer.EXPECT().Register(gomock.Nil()).Return(segmentsChan, nil).Times(1)
 
 		// run service
 		runningCh := make(chan struct{})

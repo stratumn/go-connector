@@ -19,7 +19,7 @@ var log = logging.Logger("livesync")
 
 // Synchronizer is the type exposed by the livesync service.
 type Synchronizer interface {
-	Register(WorkflowStates) <-chan []*cs.Segment
+	Register(WorkflowStates) (<-chan []*cs.Segment, error)
 }
 
 type synchronizer struct {
@@ -58,16 +58,21 @@ func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []string) Sy
 // wants to receive updates from and from which cursor it should receive updates.
 // The livesync automatically subscribe to the workflow if it is not already the case.
 // If nil is passed, the listener will be notified of updates for all synced workflows.
-func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Segment {
+func (s *synchronizer) Register(states WorkflowStates) (<-chan []*cs.Segment, error) {
 	for w, serviceEndCursor := range states {
 		if livesyncEndCursor, ok := s.workflowStates[w]; !ok {
 			s.workflowStates[w] = serviceEndCursor
 		} else if ok && strings.Compare(serviceEndCursor, livesyncEndCursor) == -1 {
+			gap, err := CompareCursors(serviceEndCursor, livesyncEndCursor)
+			if err != nil {
+				return nil, err
+			}
 			// if a service register for updates in the past, lower the current end cursor.
-			s.workflowStates[w] = serviceEndCursor
+			if gap < 0 {
+				s.workflowStates[w] = serviceEndCursor
+			}
 		}
 	}
-
 	if states == nil {
 		states = make(WorkflowStates, len(s.workflowStates))
 		for wfID := range s.workflowStates {
@@ -80,7 +85,7 @@ func (s *synchronizer) Register(states WorkflowStates) <-chan []*cs.Segment {
 		listener: newCh,
 		states:   states,
 	})
-	return newCh
+	return newCh, nil
 }
 
 // pollAndNotify fetches all the missing links from the given workflows.
@@ -122,10 +127,11 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 					if _, ok := service.states[id]; !ok {
 						continue
 					}
-					switch strings.Compare(s.workflowStates[id], service.states[id]) {
-					case -1, 0:
-						break
-					default:
+					gap, err := CompareCursors(s.workflowStates[id], service.states[id])
+					if err != nil {
+						log.Errorf("error comparing cursors: %s", err)
+					}
+					if gap > 0 {
 						service.listener <- rsp.WorkflowByRowID.Links.Edges.Slice(service.states[id])
 						service.states[id] = s.workflowStates[id]
 					}
