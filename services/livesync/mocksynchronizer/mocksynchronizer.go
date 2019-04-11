@@ -35,10 +35,11 @@ func (m *MockSynchronizer) EXPECT() *MockSynchronizerMockRecorder {
 }
 
 // Register mocks base method
-func (m *MockSynchronizer) Register(arg0 livesync.WorkflowStates) <-chan []*go_chainscript.Segment {
+func (m *MockSynchronizer) Register(arg0 livesync.WorkflowStates) (<-chan []*go_chainscript.Segment, error) {
 	ret := m.ctrl.Call(m, "Register", arg0)
 	ret0, _ := ret[0].(<-chan []*go_chainscript.Segment)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Register indicates an expected call of Register

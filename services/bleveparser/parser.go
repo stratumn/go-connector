@@ -82,7 +82,10 @@ func indexLink(ctx context.Context, b *bleve.Batch, l *cs.Link) error {
 // run subscribes to the livesync service and waits for updates.
 // It returns an error in case the channel is closed.
 func (p *parser) run(ctx context.Context) error {
-	segmentsChan := p.synchronizer.Register(nil)
+	segmentsChan, err := p.synchronizer.Register(nil)
+	if err != nil {
+		return err
+	}
 
 	for {
 		select {

@@ -47,7 +47,10 @@ func (p *parser) saveLinks(ctx context.Context, segments []*cs.Segment) error {
 // It returns an error in case the channel is closed.
 func (p *parser) run(ctx context.Context) error {
 	// pass nil to subscribe to all updates
-	linkChan := p.synchronizer.Register(nil)
+	linkChan, err := p.synchronizer.Register(nil)
+	if err != nil {
+		return err
+	}
 
 	for {
 		select {

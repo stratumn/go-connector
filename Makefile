@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 NIX_OS_ARCHS?=darwin-amd64 linux-amd64
 WIN_OS_ARCHS?=windows-amd64
-VERSION=$(shell ./version.sh)
+VERSION=latest
 GIT_COMMIT=$(shell git rev-parse HEAD)
 GIT_PATH=$(shell git rev-parse --show-toplevel)
 GITHUB_REPO=$(shell basename $(GIT_PATH))
