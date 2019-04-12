@@ -1,10 +1,16 @@
 package auth
 
 import (
-	"errors"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"net/url"
+
+	"github.com/pkg/errors"
+)
+
+// Those are the errors returned by the middleware.
+var (
+	ErrMissingToken = errors.New("an authorization token must be provided")
 )
 
 // Middleware is the interface exposing a middleware function providing authentication.
@@ -20,8 +26,8 @@ type StratumnAccountMiddleware struct {
 
 // NewStratumnAccountMiddleware returns a new instance of StratumnAccountMiddleware.
 func NewStratumnAccountMiddleware(accountURL string) (Middleware, error) {
-	if accountURL == "" {
-		return nil, errors.New("Stratumn Account API URL is required")
+	if _, err := url.ParseRequestURI(accountURL); err != nil {
+		return nil, errors.Wrap(err, "could not instantiate Stratumn Account Auth Middleware")
 	}
 	return &StratumnAccountMiddleware{accountURL}, nil
 }
@@ -32,10 +38,10 @@ func NewStratumnAccountMiddleware(accountURL string) (Middleware, error) {
 // The request is rejected if a 401 is returned and goes through otherwise.
 func (s *StratumnAccountMiddleware) WithAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Logged connection from %s", r.RemoteAddr)
 		infoReq, err := http.NewRequest("GET", s.AccountURL+"/info", nil)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
 			return
 		}
 
@@ -43,16 +49,15 @@ func (s *StratumnAccountMiddleware) WithAuth(next http.HandlerFunc) http.Handler
 		token := r.Header.Get("authorization")
 		if token == "" {
 			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("an authorization tokne must be provided"))
+			w.Write([]byte(ErrMissingToken.Error()))
 			return
 		}
 		infoReq.Header.Set("authorization", token)
 
 		infoResp, err := http.DefaultClient.Do(infoReq)
 		if err != nil {
-			b, _ := ioutil.ReadAll(infoResp.Body)
-			w.WriteHeader(infoResp.StatusCode)
-			w.Write(b)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
 			return
 		}
 		if infoResp.StatusCode == http.StatusUnauthorized {
