@@ -40,33 +40,34 @@ func (s *StratumnAccountMiddleware) WithAuth(next http.HandlerFunc) http.Handler
 	return func(w http.ResponseWriter, r *http.Request) {
 		infoReq, err := http.NewRequest("GET", s.AccountURL+"/info", nil)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			writeResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 			return
 		}
 
 		// forward the authorization token to Account API.
 		token := r.Header.Get("authorization")
 		if token == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(ErrMissingToken.Error()))
+			writeResponse(w, http.StatusUnauthorized, []byte(ErrMissingToken.Error()))
 			return
 		}
 		infoReq.Header.Set("authorization", token)
 
 		infoResp, err := http.DefaultClient.Do(infoReq)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			writeResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 			return
 		}
 		if infoResp.StatusCode == http.StatusUnauthorized {
 			b, _ := ioutil.ReadAll(infoResp.Body)
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write(b)
+			writeResponse(w, http.StatusUnauthorized, b)
 			return
 		}
 
 		next.ServeHTTP(w, r)
 	}
+}
+
+func writeResponse(w http.ResponseWriter, statusCode int, response []byte) {
+	w.WriteHeader(statusCode)
+	_, _ = w.Write(response)
 }
