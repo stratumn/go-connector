@@ -57,7 +57,7 @@ func (s *StratumnAccountMiddleware) WithAuth(next http.HandlerFunc) http.Handler
 			writeResponse(w, http.StatusInternalServerError, []byte(err.Error()))
 			return
 		}
-		if infoResp.StatusCode == http.StatusUnauthorized {
+		if infoResp.StatusCode >= 400 {
 			b, _ := ioutil.ReadAll(infoResp.Body)
 			writeResponse(w, http.StatusUnauthorized, b)
 			return
