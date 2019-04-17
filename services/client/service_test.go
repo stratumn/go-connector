@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stratumn/go-crypto/encoding"
+
 	"github.com/stratumn/go-connector/services/client"
 	"github.com/stratumn/go-connector/services/decryption"
 	"github.com/stratumn/go-connector/services/decryption/mockdecryptor"
@@ -39,6 +41,19 @@ var (
 
 type testRsp struct{ Value string }
 
+func TestClientService_BadSigningKey(t *testing.T) {
+	config := client.Config{
+		TraceURL:          "",
+		AccountURL:        "",
+		SigningPrivateKey: "bad",
+	}
+
+	s := &client.Service{}
+	s.SetConfig(config)
+
+	err := s.Run(context.Background(), func() {}, func() {})
+	assert.EqualError(t, err, encoding.ErrBadPEMFormat.Error())
+}
 func TestClientService_TraceClient(t *testing.T) {
 	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
 		ExpiresAt: time.Now().Unix() + 1000,
@@ -114,6 +129,40 @@ func TestClientService_TraceClient(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "42", rsp.CreateLink.Trace.RowID)
+	})
+
+	t.Run("CreateLinks", func(t *testing.T) {
+		traceServer := createMockServer(t, token, 0, expected, `{"data": {"createLinks": {"links":[{"traceId":"42"}]}}}`)
+		accountServer := createMockServer(t, token, 1, nil, "")
+
+		defer traceServer.Close()
+		defer accountServer.Close()
+
+		config := client.Config{
+			TraceURL:          traceServer.URL,
+			AccountURL:        accountServer.URL,
+			SigningPrivateKey: key,
+		}
+
+		s := &client.Service{}
+		s.SetConfig(config)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		runningCh := make(chan struct{})
+
+		go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+		<-runningCh
+
+		c := s.Expose().(client.StratumnClient)
+
+		link1, _ := chainscript.NewLinkBuilder("one", "two").Build()
+		link2, _ := chainscript.NewLinkBuilder("one", "two").Build()
+		rsp, err := c.CreateLinks(ctx, []*chainscript.Link{link1, link2})
+
+		require.NoError(t, err)
+		assert.Equal(t, "42", rsp.CreateLinks.Links[0].TraceID)
 	})
 
 }
@@ -669,12 +718,23 @@ func createMockServer(t *testing.T, token string, maxLogin int, expected map[str
 			err := json.NewDecoder(r.Body).Decode(&req)
 			require.NoError(t, err)
 
+			isSigned := func(link map[string]interface{}) {
+				signatures := link["signatures"].([]interface{})
+				assert.Len(t, signatures, 1)
+
+			}
 			if req["query"] == client.CreateLinkMutation {
 				// ensure the link has been signed
 				vars := req["variables"].(map[string]interface{})
 				link := vars["link"].(map[string]interface{})
-				signatures := link["signatures"].([]interface{})
-				assert.Len(t, signatures, 1)
+				isSigned(link)
+			} else if req["query"] == client.CreateLinksMutation {
+				vars := req["variables"].(map[string]interface{})
+				links := vars["links"].([]interface{})
+				link1 := links[0].(map[string]interface{})
+				link2 := links[1].(map[string]interface{})
+				isSigned(link1["link"].(map[string]interface{}))
+				isSigned(link2["link"].(map[string]interface{}))
 			} else {
 				assert.Equal(t, expected["query"], req["query"])
 				assert.Equal(t, expected["variables"], req["variables"])
