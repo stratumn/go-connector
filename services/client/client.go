@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/stratumn/go-crypto/keys"
+
 	"github.com/stratumn/go-connector/services/decryption"
 
 	logging "github.com/ipfs/go-log"
@@ -31,14 +33,24 @@ type client struct {
 	httpClient *http.Client
 	decryptor  decryption.Decryptor
 
-	// The PEM encoded signing private key of the conenctor.
+	// The PEM encoded signing keys of the conenctor.
 	signingPrivateKey []byte
+	signingPublicKey  []byte
 
 	authToken string
 }
 
-func newClient(traceURL string, accountURL string, signingPrivateKey []byte, decryptor decryption.Decryptor) StratumnClient {
+func newClient(traceURL string, accountURL string, signingPrivateKey []byte, decryptor decryption.Decryptor) (StratumnClient, error) {
 	httpClient := &http.Client{Timeout: time.Second * 10}
+
+	_, pub, err := keys.ParseSecretKey(signingPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	signingPublicKey, err := keys.EncodePublicKey(pub)
+	if err != nil {
+		return nil, err
+	}
 
 	return &client{
 		urlTrace:          traceURL,
@@ -46,7 +58,8 @@ func newClient(traceURL string, accountURL string, signingPrivateKey []byte, dec
 		httpClient:        httpClient,
 		decryptor:         decryptor,
 		signingPrivateKey: signingPrivateKey,
-	}
+		signingPublicKey:  signingPublicKey,
+	}, nil
 }
 
 type gqlError struct {

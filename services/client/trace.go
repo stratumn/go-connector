@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"reflect"
@@ -16,8 +17,10 @@ type TraceClient interface {
 	// CallTraceGql makes a call to the Trace graphql endpoint.
 	CallTraceGql(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error
 	CreateLink(ctx context.Context, link *chainscript.Link) (*CreateLinkPayload, error)
+	CreateLinks(ctx context.Context, links []*chainscript.Link) (*CreateLinksPayload, error)
 
 	GetRecipientsPublicKeys(ctx context.Context, workflowID string) ([]*PublicKeyInfo, error)
+	SignLink(link *chainscript.Link) error
 }
 
 func (c *client) CallTraceGql(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
@@ -163,10 +166,10 @@ const CreateLinkMutation = `mutation CreateLinkMutation ($link: JSON!) {
 	}
 }`
 
-// CreateStatusRequestLink creates a status request attestation.
+// CreateLink creates an attestation.
 // It signs the link before sending it.
 func (c *client) CreateLink(ctx context.Context, link *chainscript.Link) (*CreateLinkPayload, error) {
-	err := link.Sign(c.signingPrivateKey, "[version,data,meta]")
+	err := c.SignLink(link)
 	if err != nil {
 		return nil, err
 	}
@@ -178,6 +181,55 @@ func (c *client) CreateLink(ctx context.Context, link *chainscript.Link) (*Creat
 		return nil, err
 	}
 	return &rsp, nil
+}
+
+// CreateLinksPayload is the type returned by CreateLinks.
+type CreateLinksPayload struct {
+	CreateLinks struct {
+		Links []struct {
+			TraceID string
+		}
+	}
+}
+
+// CreateLinksMutation is the mutation sent to create multiple links.
+const CreateLinksMutation = `mutation CreateLinksMutation ($links: [CreateLinkInput!]) {
+	createLinks(input: $links) {
+		links {
+			traceId
+		}
+	}
+}`
+
+// CreateLinks creates multiple attestations.
+// It signs the links before sending them.
+func (c *client) CreateLinks(ctx context.Context, links []*chainscript.Link) (*CreateLinksPayload, error) {
+	linksInput := make([]map[string]interface{}, len(links))
+	for i, link := range links {
+		err := c.SignLink(link)
+		if err != nil {
+			return nil, err
+		}
+		linksInput[i] = map[string]interface{}{"link": link}
+	}
+
+	variables := map[string]interface{}{"links": linksInput}
+
+	var rsp CreateLinksPayload
+	if err := c.CallTraceGql(ctx, CreateLinksMutation, variables, &rsp); err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// SignLink signs a link.
+func (c *client) SignLink(link *chainscript.Link) error {
+	for _, sig := range link.Signatures {
+		if bytes.Equal(sig.PublicKey, c.signingPublicKey) {
+			return nil
+		}
+	}
+	return link.Sign(c.signingPrivateKey, "[version,data,meta]")
 }
 
 // PublicKeyInfo contains the public key and its ID.

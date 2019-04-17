@@ -95,7 +95,6 @@ func (s *Service) Plug(exposed map[string]interface{}) error {
 }
 
 // Expose exposes the stratumn client to other services.
-//
 // It exposes the Stratumn client.
 func (s *Service) Expose() interface{} {
 	return s.client
@@ -103,7 +102,11 @@ func (s *Service) Expose() interface{} {
 
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
-	s.client = newClient(s.config.TraceURL, s.config.AccountURL, []byte(s.config.SigningPrivateKey), s.decryptor)
+	var err error
+	s.client, err = newClient(s.config.TraceURL, s.config.AccountURL, []byte(s.config.SigningPrivateKey), s.decryptor)
+	if err != nil {
+		return err
+	}
 
 	running()
 	<-ctx.Done()
