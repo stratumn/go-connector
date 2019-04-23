@@ -17,7 +17,7 @@ const (
 	validToken = "Bearer super-secret-token"
 
 	accountAPIError    = "fail"
-	accountAPIResponse = `{"email":"hello@stratumn.com","accountId":"1","otherAccountIds":["1","2"],"userId":"3"}`
+	accountAPIResponse = `{"email":"hello@stratumn.com","accountId":"1","otherAccountIds":["2","3"],"userId":"4"}`
 
 	apiResponse = "ok"
 )
@@ -48,7 +48,7 @@ func mockAPI(middleware func(http.HandlerFunc) http.HandlerFunc) *httptest.Serve
 func TestStratumnAccountMiddleware(t *testing.T) {
 
 	t.Run("Fails if the account URL is not specified", func(t *testing.T) {
-		_, err := auth.NewStratumnAccountMiddleware("test")
+		_, err := auth.NewStratumnAccountMiddleware("test", nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "could not instantiate Stratumn Account Auth Middleware")
 	})
@@ -57,7 +57,7 @@ func TestStratumnAccountMiddleware(t *testing.T) {
 		accountMock := mockStratumnAccount()
 		defer accountMock.Close()
 
-		m, err := auth.NewStratumnAccountMiddleware(accountMock.URL)
+		m, err := auth.NewStratumnAccountMiddleware(accountMock.URL, nil)
 		require.NoError(t, err)
 
 		apiMock := mockAPI(m.WithAuth)
@@ -75,7 +75,7 @@ func TestStratumnAccountMiddleware(t *testing.T) {
 		accountMock := mockStratumnAccount()
 		defer accountMock.Close()
 
-		m, err := auth.NewStratumnAccountMiddleware(accountMock.URL)
+		m, err := auth.NewStratumnAccountMiddleware(accountMock.URL, nil)
 		require.NoError(t, err)
 
 		apiMock := mockAPI(m.WithAuth)
@@ -91,11 +91,89 @@ func TestStratumnAccountMiddleware(t *testing.T) {
 		assert.Equal(t, []byte(accountAPIError), b)
 	})
 
+	t.Run("Restricts the access to a given accountID", func(t *testing.T) {
+		accountMock := mockStratumnAccount()
+		defer accountMock.Close()
+
+		t.Run("Auth OK", func(t *testing.T) {
+			m, err := auth.NewStratumnAccountMiddleware(accountMock.URL, []string{"1"})
+			require.NoError(t, err)
+
+			apiMock := mockAPI(m.WithAuth)
+			defer apiMock.Close()
+
+			req, _ := http.NewRequest("GET", apiMock.URL+"/any", nil)
+			req.Header.Set("authorization", validToken)
+			rsp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			b, _ := ioutil.ReadAll(rsp.Body)
+			assert.Equal(t, http.StatusOK, rsp.StatusCode)
+			assert.Equal(t, []byte(apiResponse), b)
+		})
+
+		t.Run("Auth Fails", func(t *testing.T) {
+			m, err := auth.NewStratumnAccountMiddleware(accountMock.URL, []string{"9"})
+			require.NoError(t, err)
+
+			apiMock := mockAPI(m.WithAuth)
+			defer apiMock.Close()
+
+			req, _ := http.NewRequest("GET", apiMock.URL+"/any", nil)
+			req.Header.Set("authorization", validToken)
+			rsp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			b, _ := ioutil.ReadAll(rsp.Body)
+			assert.Equal(t, http.StatusUnauthorized, rsp.StatusCode)
+			assert.Equal(t, []byte(auth.ErrUnauthorizedAccount.Error()), b)
+		})
+	})
+
+	t.Run("Restricts the access to a given entity accountID", func(t *testing.T) {
+		accountMock := mockStratumnAccount()
+		defer accountMock.Close()
+
+		t.Run("Auth OK", func(t *testing.T) {
+			m, err := auth.NewStratumnAccountMiddleware(accountMock.URL, []string{"2"})
+			require.NoError(t, err)
+
+			apiMock := mockAPI(m.WithAuth)
+			defer apiMock.Close()
+
+			req, _ := http.NewRequest("GET", apiMock.URL+"/any", nil)
+			req.Header.Set("authorization", validToken)
+			rsp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			b, _ := ioutil.ReadAll(rsp.Body)
+			assert.Equal(t, http.StatusOK, rsp.StatusCode)
+			assert.Equal(t, []byte(apiResponse), b)
+		})
+
+		t.Run("Auth Fails", func(t *testing.T) {
+			m, err := auth.NewStratumnAccountMiddleware(accountMock.URL, []string{"9"})
+			require.NoError(t, err)
+
+			apiMock := mockAPI(m.WithAuth)
+			defer apiMock.Close()
+
+			req, _ := http.NewRequest("GET", apiMock.URL+"/any", nil)
+			req.Header.Set("authorization", validToken)
+			rsp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+
+			b, _ := ioutil.ReadAll(rsp.Body)
+			assert.Equal(t, http.StatusUnauthorized, rsp.StatusCode)
+			assert.Equal(t, []byte(auth.ErrUnauthorizedAccount.Error()), b)
+		})
+	})
+
 	t.Run("Serves the next request", func(t *testing.T) {
 		accountMock := mockStratumnAccount()
 		defer accountMock.Close()
 
-		m, err := auth.NewStratumnAccountMiddleware(accountMock.URL)
+		m, err := auth.NewStratumnAccountMiddleware(accountMock.URL, nil)
 		require.NoError(t, err)
 
 		apiMock := mockAPI(m.WithAuth)
@@ -110,4 +188,5 @@ func TestStratumnAccountMiddleware(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rsp.StatusCode)
 		assert.Equal(t, []byte(apiResponse), b)
 	})
+
 }
