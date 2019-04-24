@@ -31,8 +31,24 @@ type synchronizer struct {
 	registeredServices []*listener
 }
 
-// WorkflowStates maps the ID of the workflow to the cursor of the last synced link.
-type WorkflowStates map[string]string
+// WorkflowState maps the ID of the workflow to the cursor of the last synced link.
+type WorkflowState struct {
+	ID     string
+	Cursor string
+}
+
+// WorkflowStates is a list of WorkflowState
+type WorkflowStates []*WorkflowState
+
+// Get finds a WorkflowState in the list given its ID.
+func (wfStates WorkflowStates) Get(id string) (*WorkflowState, bool) {
+	for _, w := range wfStates {
+		if w.ID == id {
+			return w, true
+		}
+	}
+	return nil, false
+}
 
 type listener struct {
 	states   WorkflowStates
@@ -43,8 +59,8 @@ type listener struct {
 // It takes a stratumn client and a list of workflows to sync with.
 func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []string) Synchronizer {
 	states := make(WorkflowStates, len(watchedWorkflows))
-	for _, wfID := range watchedWorkflows {
-		states[wfID] = ""
+	for i, wfID := range watchedWorkflows {
+		states[i] = &WorkflowState{ID: wfID, Cursor: ""}
 	}
 
 	return &synchronizer{
@@ -59,24 +75,24 @@ func NewSycnhronizer(client client.StratumnClient, watchedWorkflows []string) Sy
 // The livesync automatically subscribe to the workflow if it is not already the case.
 // If nil is passed, the listener will be notified of updates for all synced workflows.
 func (s *synchronizer) Register(states WorkflowStates) (<-chan []*cs.Segment, error) {
-	for w, serviceEndCursor := range states {
-		if livesyncEndCursor, ok := s.workflowStates[w]; !ok {
-			s.workflowStates[w] = serviceEndCursor
-		} else if ok && strings.Compare(serviceEndCursor, livesyncEndCursor) == -1 {
-			gap, err := CompareCursors(serviceEndCursor, livesyncEndCursor)
+	for _, w := range states {
+		if livesyncState, ok := s.workflowStates.Get(w.ID); !ok {
+			s.workflowStates = append(s.workflowStates, &WorkflowState{ID: w.ID, Cursor: w.Cursor})
+		} else if ok && strings.Compare(w.Cursor, livesyncState.Cursor) == -1 {
+			gap, err := CompareCursors(w.Cursor, livesyncState.Cursor)
 			if err != nil {
 				return nil, err
 			}
 			// if a service register for updates in the past, lower the current end cursor.
 			if gap < 0 {
-				s.workflowStates[w] = serviceEndCursor
+				livesyncState.Cursor = w.Cursor
 			}
 		}
 	}
 	if states == nil {
 		states = make(WorkflowStates, len(s.workflowStates))
-		for wfID := range s.workflowStates {
-			states[wfID] = ""
+		for i, w := range s.workflowStates {
+			states[i] = &WorkflowState{ID: w.ID, Cursor: ""}
 		}
 	}
 
@@ -90,9 +106,9 @@ func (s *synchronizer) Register(states WorkflowStates) (<-chan []*cs.Segment, er
 
 // pollAndNotify fetches all the missing links from the given workflows.
 func (s *synchronizer) pollAndNotify(ctx context.Context) error {
-	for id := range s.workflowStates {
+	for _, w := range s.workflowStates {
 		variables := map[string]interface{}{
-			"id":    id,
+			"id":    w.ID,
 			"limit": DefaultPagination,
 		}
 
@@ -100,8 +116,8 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 		rsp.WorkflowByRowID.Links.PageInfo.HasNextPage = true
 		for rsp.WorkflowByRowID.Links.PageInfo.HasNextPage {
 			// the cursor acts as an offset to fetch links from.
-			if s.workflowStates[id] != "" {
-				variables["cursor"] = s.workflowStates[id]
+			if w.Cursor != "" {
+				variables["cursor"] = w.Cursor
 			}
 
 			err := s.client.CallTraceGql(ctx, pollQuery, variables, &rsp)
@@ -117,23 +133,24 @@ func (s *synchronizer) pollAndNotify(ctx context.Context) error {
 			}
 			if len(segments) > 0 {
 				log.Infof("Synced %d links\n", len(segments))
-				s.workflowStates[id] = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
+				w.Cursor = rsp.WorkflowByRowID.Links.PageInfo.EndCursor
 				// send the synced segments to the registered services.
 				// compare the current cursor to the cursor specified by each service:
 				// - if the current cursor is anterior or equal, do not send any updates.
 				// - else send all the segments starting from the service's cursor.
 				for _, service := range s.registeredServices {
+					serviceState, ok := service.states.Get(w.ID)
 					// if the service does not subscribe to this workflow, skip it.
-					if _, ok := service.states[id]; !ok {
+					if !ok {
 						continue
 					}
-					gap, err := CompareCursors(s.workflowStates[id], service.states[id])
+					gap, err := CompareCursors(w.Cursor, serviceState.Cursor)
 					if err != nil {
 						log.Errorf("error comparing cursors: %s", err)
 					}
 					if gap > 0 {
-						service.listener <- rsp.WorkflowByRowID.Links.Edges.Slice(service.states[id])
-						service.states[id] = s.workflowStates[id]
+						service.listener <- rsp.WorkflowByRowID.Links.Edges.Slice(serviceState.Cursor)
+						serviceState.Cursor = w.Cursor
 					}
 				}
 			}

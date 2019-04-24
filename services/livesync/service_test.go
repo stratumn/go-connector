@@ -155,7 +155,9 @@ func TestLivesyncService(t *testing.T) {
 
 		synchronizer := s.Expose().(livesync.Synchronizer)
 		// subscribe to the first workflow
-		updates, err := synchronizer.Register(livesync.WorkflowStates{watchedWorkflows[0]: ""})
+		updates, err := synchronizer.Register(livesync.WorkflowStates{
+			&livesync.WorkflowState{ID: watchedWorkflows[0]},
+		})
 		require.NoError(t, err)
 
 		go func() {
@@ -210,7 +212,9 @@ func TestLivesyncService(t *testing.T) {
 
 		// only subscribe to the first workflow
 		synchronizer := s.Expose().(livesync.Synchronizer)
-		updates, err := synchronizer.Register(livesync.WorkflowStates{watchedWorkflows[0]: ""})
+		updates, err := synchronizer.Register(livesync.WorkflowStates{
+			&livesync.WorkflowState{ID: watchedWorkflows[0]},
+		})
 		require.NoError(t, err)
 
 		go func() {
@@ -272,7 +276,9 @@ func TestLivesyncService(t *testing.T) {
 
 		// only subscribe to the first workflow from cursor1
 		synchronizer := s.Expose().(livesync.Synchronizer)
-		updates, err := synchronizer.Register(livesync.WorkflowStates{watchedWorkflows[0]: cursor1})
+		updates, err := synchronizer.Register(livesync.WorkflowStates{
+			&livesync.WorkflowState{ID: watchedWorkflows[0], Cursor: cursor1},
+		})
 		require.NoError(t, err)
 
 		go func() {
@@ -335,7 +341,9 @@ func TestLivesyncService(t *testing.T) {
 
 		synchronizer := s.Expose().(livesync.Synchronizer)
 
-		subscriber1, err := synchronizer.Register(livesync.WorkflowStates{watchedWorkflows[0]: cursor1})
+		subscriber1, err := synchronizer.Register(livesync.WorkflowStates{
+			&livesync.WorkflowState{ID: watchedWorkflows[0], Cursor: cursor1},
+		})
 		require.NoError(t, err)
 
 		go func() {
@@ -346,7 +354,9 @@ func TestLivesyncService(t *testing.T) {
 
 			// a second subscriber registers to updates from the beginning,
 			// therefore it should receive 2 updates.
-			subscriber2, err := synchronizer.Register(livesync.WorkflowStates{watchedWorkflows[0]: ""})
+			subscriber2, err := synchronizer.Register(livesync.WorkflowStates{
+				&livesync.WorkflowState{ID: watchedWorkflows[0]},
+			})
 			require.NoError(t, err)
 			segments = <-subscriber2
 			assert.Len(t, segments, 2)
@@ -400,6 +410,66 @@ func TestLivesyncService(t *testing.T) {
 
 		err := s.Run(ctx, func() {}, func() {})
 		assert.EqualError(t, err, context.Canceled.Error())
+
+		<-stoppingCh
+	})
+
+	t.Run("Synchronize workflows in the right order", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+		defer cancel()
+
+		client := mockclient.NewMockStratumnClient(ctrl)
+		config := livesync.Config{
+			PollInterval:     20,
+			WatchedWorkflows: watchedWorkflows,
+		}
+		s := &livesync.Service{}
+		s.SetConfig(config)
+		s.Plug(map[string]interface{}{
+			"stratumnClient": client,
+		})
+
+		gomock.InOrder(
+			client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": "1", "limit": livesync.DefaultPagination}), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
+					err := json.Unmarshal([]byte(rspLastPage), rsp)
+					assert.NoError(t, err)
+					return nil
+				}).Times(1),
+			client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": "2", "limit": livesync.DefaultPagination}), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
+					err := json.Unmarshal([]byte(rspLastPage), rsp)
+					assert.NoError(t, err)
+					return nil
+				}).Times(1),
+			client.EXPECT().CallTraceGql(gomock.Any(), gomock.Any(), gomock.Eq(map[string]interface{}{"id": "3", "limit": livesync.DefaultPagination}), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, query string, variables map[string]interface{}, rsp interface{}) error {
+					err := json.Unmarshal([]byte(rspLastPage), rsp)
+					assert.NoError(t, err)
+					return nil
+				}).Times(1),
+		)
+
+		// only subscribe to the first workflow from cursor1
+		synchronizer := s.Expose().(livesync.Synchronizer)
+		updates, err := synchronizer.Register(livesync.WorkflowStates{
+			&livesync.WorkflowState{ID: "1"},
+			&livesync.WorkflowState{ID: "2"},
+			&livesync.WorkflowState{ID: "3"},
+		})
+		require.NoError(t, err)
+
+		go func() {
+			for i := 0; i < 3; i++ {
+				s := <-updates
+				assert.Len(t, s, 1)
+			}
+			stoppingCh <- struct{}{}
+
+		}()
+
+		err = s.Run(ctx, func() {}, func() {})
+		assert.EqualError(t, err, context.DeadlineExceeded.Error())
 
 		<-stoppingCh
 	})
