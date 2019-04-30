@@ -50,11 +50,13 @@ Deployment strategies will vary depending on the customer infrastructure and req
 
 1. the connector is deployed on the customer’s cloud.
 2. the connector is deployed on-premise, directly on the customer’s infrastructure.
-3. the connector is deployed by Stratumn, on Stratumn’s secure cloud. This means that the customer gives Stratumn a way to access its keys, and to decrypt data on his behalf.
+3. the connector is deployed by Stratumn, on Stratumn’s secure cloud.
 
 In the first case, deployment is fairly simple. Stratumn provides an out-of-the-box deployment configuration for the major cloud providers (AWS, GCP, Azure), therefore the effort will be minimal for the customer IT team.
 
 In the second case however, the deployment process will depend on the infrastructure and its constraints. We provide binaries for linux, mac and windows as well as a docker image ready to use. With this approach, the customer IT team will have to handle the deployment and maintenance of the solution using the documentation Stratumn provides.
+
+Finally in the third case, the customer would give Stratumn a way to access its keys, and to decrypt data on his behalf. It is the easiest deployment path for the customer, since Stratumn takes care of it almost entirely, except for the key provision. However, it means that the customer trusts Stratumn with its data since it will transit unencrypted on our own servers.
 
 ## Authentication
 
