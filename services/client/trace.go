@@ -7,7 +7,8 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	chainscript "github.com/stratumn/go-chainscript"
+	"github.com/stratumn/go-chainscript"
+	csutils "github.com/stratumn/go-connector/lib/chainscript"
 
 	"github.com/stratumn/go-connector/services/decryption"
 )
@@ -19,7 +20,7 @@ type TraceClient interface {
 	CreateLink(ctx context.Context, link *chainscript.Link) (*CreateLinkPayload, error)
 	CreateLinks(ctx context.Context, links []*chainscript.Link) (*CreateLinksPayload, error)
 
-	GetRecipientsPublicKeys(ctx context.Context, workflowID string) ([]*PublicKeyInfo, error)
+	GetRecipientsPublicKeys(ctx context.Context, workflowID string) ([]*csutils.PublicKeyInfo, error)
 	SignLink(link *chainscript.Link) error
 }
 
@@ -232,12 +233,6 @@ func (c *client) SignLink(link *chainscript.Link) error {
 	return link.Sign(c.signingPrivateKey, "[version,data,meta]")
 }
 
-// PublicKeyInfo contains the public key and its ID.
-type PublicKeyInfo struct {
-	ID        string
-	PublicKey []byte
-}
-
 // RecipientsKeysQuery is the query sent to fetch the public
 // keys of the workflow participants from trace API.
 const RecipientsKeysQuery = `query GetRecipientsKeysQuery($workflowId: BigInt!) {
@@ -271,7 +266,7 @@ type RecipientsKeysRsp struct {
 
 // GetRecipientsPublicKeys gets the public keys of the workflow's group owners.
 // the keys are cached for `keyRefreshInterval` minutes.
-func (c *client) GetRecipientsPublicKeys(ctx context.Context, workflowID string) ([]*PublicKeyInfo, error) {
+func (c *client) GetRecipientsPublicKeys(ctx context.Context, workflowID string) ([]*csutils.PublicKeyInfo, error) {
 
 	variables := map[string]interface{}{"workflowId": workflowID}
 
@@ -283,10 +278,10 @@ func (c *client) GetRecipientsPublicKeys(ctx context.Context, workflowID string)
 		return nil, errors.Errorf("workflow %s not found", workflowID)
 	}
 
-	res := make([]*PublicKeyInfo, len(rsp.WorkflowByRowID.Groups.Nodes))
+	res := make([]*csutils.PublicKeyInfo, len(rsp.WorkflowByRowID.Groups.Nodes))
 	for i, g := range rsp.WorkflowByRowID.Groups.Nodes {
 		pk := []byte(g.Owner.EncryptionKey.PublicKey)
-		res[i] = &PublicKeyInfo{PublicKey: pk, ID: g.Owner.EncryptionKey.RowID}
+		res[i] = &csutils.PublicKeyInfo{PublicKey: pk, ID: g.Owner.EncryptionKey.RowID}
 	}
 
 	return res, nil
