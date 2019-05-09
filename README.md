@@ -90,3 +90,25 @@ In addition, Stratumn provides a well furnished documentation (high level overvi
 ## Licensing
 
 The connector of the customer will of course remain private as it deals with the customer business logic. However, the libraries with which the connector is built are open-source thus completely auditable by anyone. You will find a detailed list of all the dependencies in the `go.mod` file.
+
+## Deployment requirements
+
+We provide you with a ready-to-use docker image through the Docker Hub. Thus, the requirements are very limited:
+    
+### Dependencies:
+
+- Docker: available on Linux, MacOS and Windows. Supported by major cloud providers: Amazon Web Services, Google Cloud Platform, Microsoft Azure.
+
+### Networking:
+
+- The API port is configurable via the environment so you may chose which inbound port to open.
+- The connector will make calls to Stratumn APIs, therefore the outbound port 80 (HTTP) and 443 (HTTPS) must be open.
+- A publicly accessible IP address.
+
+### Computing resources:
+
+- Between 4GB and 8GB of RAM.
+- At least 2 CPU cores.
+- No storage required.
+
+If you encounter an issue with these requirements, contact us and we will work something out.
