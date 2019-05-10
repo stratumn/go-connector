@@ -33,7 +33,7 @@ require (
 	github.com/steveyen/gtreap v0.0.0-20150807155958-0abe01ef9be2 // indirect
 	github.com/stratumn/go-chainscript v1.0.1
 	github.com/stratumn/go-crypto v0.2.0
-	github.com/stratumn/go-node v0.2.0
+	github.com/stratumn/go-node v0.2.1-0.20190509100255-5cd941c63177
 	github.com/stratumn/merkle v0.0.0-20181206165707-724150182895 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/tecbot/gorocksdb v0.0.0-20181010114359-8752a9433481 // indirect

@@ -8,6 +8,7 @@ import (
 	context "context"
 	gomock "github.com/golang/mock/gomock"
 	go_chainscript "github.com/stratumn/go-chainscript"
+	chainscript "github.com/stratumn/go-connector/lib/chainscript"
 	client "github.com/stratumn/go-connector/services/client"
 	reflect "reflect"
 )
@@ -86,9 +87,9 @@ func (mr *MockStratumnClientMockRecorder) CreateLinks(arg0, arg1 interface{}) *g
 }
 
 // GetRecipientsPublicKeys mocks base method
-func (m *MockStratumnClient) GetRecipientsPublicKeys(arg0 context.Context, arg1 string) ([]*client.PublicKeyInfo, error) {
+func (m *MockStratumnClient) GetRecipientsPublicKeys(arg0 context.Context, arg1 string) ([]*chainscript.PublicKeyInfo, error) {
 	ret := m.ctrl.Call(m, "GetRecipientsPublicKeys", arg0, arg1)
-	ret0, _ := ret[0].([]*client.PublicKeyInfo)
+	ret0, _ := ret[0].([]*chainscript.PublicKeyInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
