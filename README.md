@@ -30,7 +30,7 @@ In the end, the client systems never talks to Trace API directly. It always goes
 
 ## Action scope
 
-The connector is designed to be fully modular in order to fit any use case our customer may have. The following modules and can be plugged-in depending on the needs.
+The connector is designed to be fully modular in order to fit any use case our customer may have. The following modules can be plugged-in depending on the needs.
 
 **Search**: All the data specific to the customer workflows is replicated and indexed by this module to offer advanced search features: full-text search, filtering and ordering.
 
@@ -62,7 +62,7 @@ Since it will deal with sensitive business and personal data, the access to the 
 1. The connector is publicly accessible (eg: runs in the cloud with a public IP address) and access is controlled by an authentication layer. In this case, users interacting with the controller need to authenticate their request using Stratumn identity system, which can integrate with the customer identity provider (via OAuth) if one is in place.
    The advantage of this solution is that ACL is enforced at the Trace API layer rather than at the connector layer, reducing the need for custom logic in the latter. It also allows the customer to deploy a single connector for multiple entities.
 
-2. Access to the connector is restricted by a proxy server which integrates with the customer’s identity management system. This allows a great level of flexibility (internal systems may interact with the connector without going through Stratumn’s authentication system, there can be a single connector for multiple entities) but it comes to a price: this solution demands a high level of integration (for the customer IT team) which can be costly in term of development and maintenance. However, as the proxy server is developed on the customer side, it does not add any complexity to the connector itself.
+2. Access to the connector is restricted by a proxy server which integrates with the customer’s identity management system. This allows a great level of flexibility (internal systems may interact with the connector without going through Stratumn’s authentication system, there can be a single connector for multiple entities) but it comes at a price: this solution demands a high level of integration (for the customer IT team) which can be costly in term of development and maintenance. However, as the proxy server is developed on the customer side, it does not add any complexity to the connector itself.
 
 3. The connector runs in a private, closed network which can be accessed only from the customer machines or through a VPN provided by the customer. In this case, there is no ACL logic in the connector since it is enforced at the network layer. It means the connector is scoped to a single entity and that the number of connectors scales horizontally with the number of entities taking part in a workflow. This solution maybe be harder to maintain in term of infrastructure.
 
