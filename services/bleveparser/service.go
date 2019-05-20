@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/blevesearch/bleve"
-	"github.com/stratumn/go-connector/services/livesync"
-
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"
+
+	"github.com/stratumn/go-connector/services/livesync"
 )
 
 var (

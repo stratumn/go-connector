@@ -7,27 +7,28 @@ import (
 	ossignal "os/signal"
 	"syscall"
 
-	"github.com/stratumn/go-connector/services/bleveparser"
-	"github.com/stratumn/go-connector/services/blevestore"
-	"github.com/stratumn/go-connector/services/client"
-	"github.com/stratumn/go-connector/services/decryption"
-	"github.com/stratumn/go-connector/services/livesync"
-	"github.com/stratumn/go-connector/services/memorystore"
-	"github.com/stratumn/go-connector/services/parser"
-	"github.com/stratumn/go-connector/services/search"
-
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 
+	"github.com/stratumn/go-node/core"
 	event "github.com/stratumn/go-node/core/app/event/service"
 	grpcapi "github.com/stratumn/go-node/core/app/grpcapi/service"
 	grpcweb "github.com/stratumn/go-node/core/app/grpcweb/service"
 	monitoring "github.com/stratumn/go-node/core/app/monitoring/service"
 	pruner "github.com/stratumn/go-node/core/app/pruner/service"
 	signal "github.com/stratumn/go-node/core/app/signal/service"
-
-	"github.com/stratumn/go-node/core"
 	"github.com/stratumn/go-node/core/cfg"
 	"github.com/stratumn/go-node/core/manager"
+
+	"github.com/stratumn/go-connector/services/bleveparser"
+	"github.com/stratumn/go-connector/services/blevestore"
+	"github.com/stratumn/go-connector/services/client"
+	"github.com/stratumn/go-connector/services/decryption"
+	"github.com/stratumn/go-connector/services/livesync"
+	"github.com/stratumn/go-connector/services/logging"
+	"github.com/stratumn/go-connector/services/memorystore"
+	"github.com/stratumn/go-connector/services/parser"
+	"github.com/stratumn/go-connector/services/search"
 )
 
 // variables
@@ -64,6 +65,10 @@ func coreCfgFilename() string {
 func requireCoreConfigSet() cfg.Set {
 	set := core.NewConfigurableSet(Services, &Config)
 
+	// replace the default logging handler
+	loggingHandler := &logging.ConfigHandler{}
+	set[loggingHandler.ID()] = loggingHandler
+
 	if err := core.LoadConfig(set, coreCfgFilename()); err != nil {
 		fmt.Fprintf(os.Stderr, "Could not load the core configuration file %q: %s.\n", coreCfgFilename(), err)
 
@@ -98,7 +103,7 @@ func main() {
 
 	go start()
 
-	fmt.Println("Connector running...")
+	log.Info("Connector running...")
 
 	// Reload configuration and restart on SIGHUP signal.
 	sig := make(chan os.Signal, 1)
