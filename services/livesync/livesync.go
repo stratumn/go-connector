@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	logging "github.com/ipfs/go-log"
 	cs "github.com/stratumn/go-chainscript"
 
 	"github.com/stratumn/go-connector/services/client"
@@ -14,8 +13,6 @@ import (
 
 // DefaultPagination is the number of links fetched by API call.
 const DefaultPagination = 50
-
-var log = logging.Logger("livesync")
 
 // Synchronizer is the type exposed by the livesync service.
 type Synchronizer interface {

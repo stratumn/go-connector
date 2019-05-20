@@ -8,18 +8,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stratumn/go-crypto/keys"
 
 	"github.com/stratumn/go-connector/services/decryption"
-
-	logging "github.com/ipfs/go-log"
-	"github.com/pkg/errors"
 )
 
 //go:generate mockgen -package mockclient -destination mockclient/mockclient.go github.com/stratumn/go-connector/services/client StratumnClient
-
-// log is the logger for the protocol.
-var log = logging.Logger("client")
 
 // StratumnClient is the client interface to Stratumn services.
 type StratumnClient interface {

@@ -4,11 +4,14 @@ import (
 	"context"
 
 	"github.com/blevesearch/bleve"
-	"github.com/stratumn/go-connector/services/livesync"
-
+	"github.com/sirupsen/logrus"
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"
+
+	"github.com/stratumn/go-connector/services/livesync"
 )
+
+var log = logrus.WithField("service", "blevestore")
 
 var (
 	// ErrNotStore is returned when the connected service is not a blevestore.

@@ -4,14 +4,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/stratumn/go-connector/services/client"
-
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/stratumn/go-node/core/cfg"
+
+	"github.com/stratumn/go-connector/services/client"
 )
 
 // DefaultPollInterval is the default interval at which the livesync service calls Startumn APIs (in milliseconds).
 const DefaultPollInterval = 10000
+
+var log = logrus.WithField("service", "livesync")
 
 var (
 	// ErrNotClient is returned when the connected service is not a stratumn client.
@@ -97,7 +100,6 @@ func (s *Service) Expose() interface{} {
 // Run starts the service.
 func (s *Service) Run(ctx context.Context, running, stopping func()) error {
 	ticker := time.NewTicker(time.Millisecond * s.config.PollInterval)
-
 	running()
 
 RUN_LOOP:
