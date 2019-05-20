@@ -67,11 +67,7 @@ func requireCoreConfigSet() cfg.Set {
 
 	// replace the default logging handler
 	loggingHandler := &logging.ConfigHandler{}
-	for ID := range set {
-		if ID == loggingHandler.ID() {
-			set[ID] = loggingHandler
-		}
-	}
+	set[loggingHandler.ID()] = loggingHandler
 
 	if err := core.LoadConfig(set, coreCfgFilename()); err != nil {
 		fmt.Fprintf(os.Stderr, "Could not load the core configuration file %q: %s.\n", coreCfgFilename(), err)

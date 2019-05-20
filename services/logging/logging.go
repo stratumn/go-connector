@@ -90,7 +90,7 @@ func (h *ConfigHandler) Config() interface{} {
 	return Config{
 		Writers: []WriterConfig{{
 			Type:      File,
-			Level:     "debug",
+			Level:     "info",
 			Formatter: JSON,
 			Filename:  filename,
 		}},

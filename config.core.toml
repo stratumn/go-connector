@@ -141,7 +141,7 @@
   poll_interval = 1000
 
   # The IDs of the workflows to synchronize data from.
-  watched_workflows = ["251"]
+  watched_workflows = []
 
 # Settings for the log module.
 [log]
