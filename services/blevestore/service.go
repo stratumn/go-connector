@@ -5,10 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-node/core/cfg"
-	"github.com/sirupsen/logrus"
 )
-
-var log = logrus.WithField("service", "blevestore")
 
 // Service is the Blevestore service.
 type Service struct {
