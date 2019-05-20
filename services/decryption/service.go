@@ -4,11 +4,8 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/stratumn/go-node/core/cfg"
 )
-
-var log = logrus.WithField("service", "decryption")
 
 // Service is the Ping service.
 type Service struct {
