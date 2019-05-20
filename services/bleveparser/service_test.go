@@ -2,7 +2,6 @@ package bleveparser_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -71,7 +70,6 @@ func TestParserService(t *testing.T) {
 
 		mockStore.EXPECT().NewBatch().Return(b).Times(1)
 		mockStore.EXPECT().Batch(b).Do(func(b *bleve.Batch) {
-			fmt.Println(b.Size())
 			assert.Equal(t, 2, b.Size())
 			cancel()
 		}).Times(1)

@@ -3,11 +3,14 @@ package client
 import (
 	"context"
 
-	"github.com/stratumn/go-connector/services/decryption"
-
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/stratumn/go-node/core/cfg"
+
+	"github.com/stratumn/go-connector/services/decryption"
 )
+
+var log = logrus.WithField("service", "client")
 
 var (
 	// ErrNotDecryptor is returned when the connected service is not a decryptor.

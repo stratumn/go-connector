@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/stratumn/go-chainscript"
-	csutils "github.com/stratumn/go-connector/lib/chainscript"
 
+	csutils "github.com/stratumn/go-connector/lib/chainscript"
 	"github.com/stratumn/go-connector/services/decryption"
 )
 

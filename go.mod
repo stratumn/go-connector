@@ -29,7 +29,8 @@ require (
 	github.com/jmhodges/levigo v1.0.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/remyoudompheng/bigfft v0.0.0-20190321074620-2f0d2b0e0001 // indirect
-	github.com/sirupsen/logrus v1.3.0 // indirect
+	github.com/satori/go.uuid v1.2.0
+	github.com/sirupsen/logrus v1.3.0
 	github.com/steveyen/gtreap v0.0.0-20150807155958-0abe01ef9be2 // indirect
 	github.com/stratumn/go-chainscript v1.0.1
 	github.com/stratumn/go-crypto v0.2.0
@@ -40,5 +41,4 @@ require (
 	go.opencensus.io v0.19.1 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/grpc v1.19.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
