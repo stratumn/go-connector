@@ -249,6 +249,61 @@ func TestClientService_TokenExpired(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestClientService_NoDecryption(t *testing.T) {
+	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
+		ExpiresAt: time.Now().Unix() + 1000,
+		IssuedAt:  time.Now().Unix() - 1000,
+	}).SignedString([]byte("plap"))
+
+	linkData := "https://bit.ly/1nab8Fa"
+	link := map[string]interface{}{
+		"data": linkData,
+	}
+
+	lb, _ := json.Marshal(link)
+	traceServer := createMockServer(t, token, 0, expected, fmt.Sprintf(`{"data": {"link": %s}}`, string(lb)))
+	accountServer := createMockServer(t, token, 1, nil, "")
+
+	defer traceServer.Close()
+	defer accountServer.Close()
+
+	config := client.Config{
+		TraceURL:          traceServer.URL,
+		AccountURL:        accountServer.URL,
+		SigningPrivateKey: key,
+		Decryption:        "",
+	}
+
+	s := &client.Service{}
+	err := s.SetConfig(config)
+	require.NoError(t, err)
+
+	err = s.Plug(map[string]interface{}{})
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runningCh := make(chan struct{})
+
+	go s.Run(ctx, func() { runningCh <- struct{}{} }, func() {})
+	<-runningCh
+
+	c := s.Expose().(client.StratumnClient)
+
+	t.Run("struct with string data", func(t *testing.T) {
+		var rsp struct {
+			Link struct {
+				Data string
+			}
+		}
+
+		err := c.CallTraceGql(ctx, q, v, &rsp)
+		assert.NoError(t, err)
+		assert.Equal(t, linkData, rsp.Link.Data)
+	})
+}
+
 func TestClientService_LinkDecryption(t *testing.T) {
 	token, _ := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwt.StandardClaims{
 		ExpiresAt: time.Now().Unix() + 1000,
