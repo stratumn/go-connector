@@ -80,6 +80,10 @@ func (s *Service) SetConfig(config interface{}) error {
 
 // Needs returns the set of services this service depends on.
 func (s *Service) Needs() map[string]struct{} {
+	if s.config.Decryption == "" {
+		return nil
+	}
+
 	needs := map[string]struct{}{}
 	needs[s.config.Decryption] = struct{}{}
 
@@ -89,6 +93,10 @@ func (s *Service) Needs() map[string]struct{} {
 // Plug sets the connected services.
 func (s *Service) Plug(exposed map[string]interface{}) error {
 	var ok bool
+
+	if s.config.Decryption == "" {
+		return nil
+	}
 
 	if s.decryptor, ok = exposed[s.config.Decryption].(decryption.Decryptor); !ok {
 		return errors.Wrap(ErrNotDecryptor, s.config.Decryption)

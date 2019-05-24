@@ -30,7 +30,9 @@ func (c *client) CallTraceGql(ctx context.Context, query string, variables map[s
 		return err
 	}
 
-	c.decryptLinks(ctx, reflect.ValueOf(rsp))
+	if c.decryptor != nil {
+		c.decryptLinks(ctx, reflect.ValueOf(rsp))
+	}
 	return nil
 }
 
